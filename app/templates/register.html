@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head>
+    <title>Register</title>
+</head>
+<body>
+    <h1>Register</h1>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        {{ form.email.label }} {{ form.email(size=32) }}<br>
+        {{ form.username.label }} {{ form.username(size=32) }}<br>
+        {{ form.password.label }} {{ form.password(size=32) }}<br>
+        {{ form.confirm_password.label }} {{ form.confirm_password(size=32) }}<br>
+        {{ form.submit() }}
+    </form>
+    <a href="{{ url_for('main.home') }}">Back to Home</a> 
+</body>
+</html>
