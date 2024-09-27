@@ -23,17 +23,17 @@ def register():
 
 @main.route('/login', methods=['GET', 'POST'])
 def login():
-    form = LoginForm()  # Make sure LoginForm is imported
+    form = LoginForm()  # DEBUG Make sure LoginForm is imported
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        print(f"User found: {user}")  # Debugging line
+        print(f"User found: {user}")  # DEBUG Debugging line
         if user and user.check_password(form.password.data):
             session['user_id'] = user.id  # Store the user ID in session
             flash('Login successful!', 'success')
             return redirect(url_for('main.dashboard'))
         else:
             flash('Login failed. Please check your email and password.', 'danger')
-            print(f"Login failed for email: {form.email.data}")  # Debugging line
+            print(f"Login failed for email: {form.email.data}")  # DEBUG Debugging line
     return render_template('login.html', form=form)
 
 
