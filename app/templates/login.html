@@ -22,16 +22,24 @@
         {% endwith %}
 
         <form method="POST" action="{{ url_for('main.login') }}">
+            {{ form.hidden_tag() }}  <!-- Include CSRF protection -->
             <div class="form-group">
-                <label for="email">Email:</label>
-                <input type="email" name="email" required>
+                {{ form.email.label }}  <!-- Render label -->
+                {{ form.email(class="form-control", required=True) }}  <!-- Render email input -->
+                {% for error in form.email.errors %}
+                    <span class="error">{{ error }}</span>  <!-- Display errors for email -->
+                {% endfor %}
             </div>
             <div class="form-group">
-                <label for="password">Password:</label>
-                <input type="password" name="password" required>
+                {{ form.password.label }}  <!-- Render label -->
+                {{ form.password(class="form-control", required=True) }}  <!-- Render password input -->
+                {% for error in form.password.errors %}
+                    <span class="error">{{ error }}</span>  <!-- Display errors for password -->
+                {% endfor %}
             </div>
             <button type="submit">Login</button>
         </form>
+        
         <a href="{{ url_for('main.home') }}">Back to Home</a> 
         <p>Don't have an account? <a href="{{ url_for('main.register') }}">Register here</a></p>
     </div>
