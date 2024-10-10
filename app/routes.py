@@ -81,16 +81,58 @@ def logout():
 def add_task():
     form = TaskForm()
     if form.validate_on_submit():
-        # Create a new task for the logged-in user
+        # Create a new task
+        new_task = Task(title=form.title.data, description=form.description.data, category_id=None)  # Set category_id as needed
+        db.session.add(new_task)
+
+        # Associate the task with the current user
         user_id = session.get('user_id')
         user = User.query.get(user_id)
-
         if user:
-            new_task = Task(title=form.title.data, description=form.description.data, user=user)
-            db.session.add(new_task)
-            db.session.commit()
+            new_task.users.append(user)
 
-            flash('Task added successfully!', 'success')
-            return redirect(url_for('main.dashboard'))
+        db.session.commit()
+
+        flash('Task added successfully!', 'success')
+        return redirect(url_for('main.dashboard'))
 
     return render_template('add_task.html', form=form)
+
+
+@main.route('/edit_task/<int:task_id>', methods=['GET', 'POST'])
+@login_required
+def edit_task(task_id):
+    task = Task.query.get_or_404(task_id)
+
+    user_id = session.get('user_id')
+    # Check if the user has access rights (either task creator or shared with appropriate role)
+    if not any(user.id == user_id for user in task.users) and task.category.user_id != user_id:
+        flash('You do not have permission to edit this task.', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    form = TaskForm(obj=task)
+    if form.validate_on_submit():
+        task.title = form.title.data
+        task.description = form.description.data
+        db.session.commit()
+
+        flash('Task updated successfully!', 'success')
+        return redirect(url_for('main.dashboard'))
+
+    return render_template('edit_task.html', form=form, task=task)
+
+@main.route('/delete_task/<int:task_id>', methods=['POST'])
+@login_required
+def delete_task(task_id):
+    task = Task.query.get_or_404(task_id)
+
+    user_id = session.get('user_id')
+    # Check if the user has access rights to delete
+    if not any(user.id == user_id for user in task.users) and task.category.user_id != user_id:
+        flash('You do not have permission to delete this task.', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    db.session.delete(task)
+    db.session.commit()
+    flash('Task deleted successfully!', 'success')
+    return redirect(url_for('main.dashboard'))

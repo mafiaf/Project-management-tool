@@ -16,6 +16,12 @@
             {% for task in tasks %}
                 <li>
                     <strong>{{ task.title }}</strong>: {{ task.description }}
+                    <br>
+                    <!-- Links to edit and delete tasks -->
+                    <a href="{{ url_for('main.edit_task', task_id=task.id) }}">Edit</a> |
+                    <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
+                        <button type="submit">Delete</button>
+                    </form>
                 </li>
             {% endfor %}
         {% else %}
