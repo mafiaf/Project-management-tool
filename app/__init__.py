@@ -6,9 +6,11 @@ db = SQLAlchemy()
 
 def create_app():
     app = Flask(__name__)
-    
-    # Configuration
-    app.config.from_object(Config)
+    try:
+        # Configuration
+        app.config.from_object(Config)
+    except Exception as e:
+        print(f"Error loading configuration: {e}")
 
     # Initialize database
     db.init_app(app)

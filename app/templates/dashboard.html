@@ -7,7 +7,23 @@
 </head>
 <body>
     <h1>Welcome to your dashboard!</h1>
-    <p>This is your user-specific page. More content will be added soon.</p>
+    <p>This is your user-specific page. Below are your tasks:</p>
+
+    <!-- New section to display tasks -->
+    <h2>Your Tasks:</h2>
+    <ul>
+        {% if tasks %}
+            {% for task in tasks %}
+                <li>
+                    <strong>{{ task.title }}</strong>: {{ task.description }}
+                </li>
+            {% endfor %}
+        {% else %}
+            <p>You have no tasks yet.</p>
+        {% endif %}
+    </ul>
+
+    <!-- Logout link -->
     <a href="{{ url_for('main.logout') }}">Logout</a>
 </body>
 </html>
