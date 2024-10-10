@@ -1,8 +1,9 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
-from .forms import RegistrationForm, LoginForm  # Import both forms
-from .models import User, db
-from .utils import login_required  # Import the login_required from utils.py
-import logging
+from .models import User, Task, db  # Import User, Task, and db
+from .forms import RegistrationForm, LoginForm, TaskForm  # Import the forms
+from .utils import login_required  # Import the login_required decorator
+import logging  # Import logging for debugging
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -45,9 +46,6 @@ def register():
     print("Form validation failed or GET request.")
     return render_template('register.html', form=form)
 
-
-
-
 @main.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -77,3 +75,22 @@ def logout():
     session.pop('user_id', None)
     flash('You have been logged out.', 'info')
     return redirect(url_for('main.login'))
+
+@main.route('/add_task', methods=['GET', 'POST'])
+@login_required
+def add_task():
+    form = TaskForm()
+    if form.validate_on_submit():
+        # Create a new task for the logged-in user
+        user_id = session.get('user_id')
+        user = User.query.get(user_id)
+
+        if user:
+            new_task = Task(title=form.title.data, description=form.description.data, user=user)
+            db.session.add(new_task)
+            db.session.commit()
+
+            flash('Task added successfully!', 'success')
+            return redirect(url_for('main.dashboard'))
+
+    return render_template('add_task.html', form=form)
