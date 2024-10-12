@@ -119,20 +119,30 @@ def edit_task(task_id):
 
     form = TaskForm(obj=task)
     if form.validate_on_submit():
+        # Get the detailed changes before updating the task
+        changes = get_task_changes(task, form)
+
+        # Update the task with new data
         task.title = form.title.data
         task.description = form.description.data
         db.session.commit()
 
-        # Log the activity
-        activity = ActivityLog(description=f"Task '{task.title}' was edited by {User.query.get(user_id).username}",
-                               user_id=user_id, task_id=task.id)
-        db.session.add(activity)
+        # Log the detailed changes
+        for change in changes:
+            activity = ActivityLog(
+                description=f"Task '{task.title}' was updated by {User.query.get(user_id).username}: {change}",
+                user_id=user_id,
+                task_id=task.id
+            )
+            db.session.add(activity)
+
         db.session.commit()
 
         flash('Task updated successfully!', 'success')
         return redirect(url_for('main.dashboard'))
 
     return render_template('add_task.html', form=form, title="Edit Task", heading="Edit Task", submit_label="Save Changes")
+
 
 
 
@@ -264,3 +274,17 @@ def task_comments(task_id):
 
     comments = Comment.query.filter_by(task_id=task_id).order_by(Comment.timestamp.desc()).all()
     return render_template('task_comments.html', task=task, form=form, comments=comments)
+
+
+def get_task_changes(task, form):
+    changes = []
+
+    if task.title != form.title.data:
+        changes.append(f"Title changed from '{task.title}' to '{form.title.data}'")
+
+    if task.description != form.description.data:
+        old_desc = task.description if task.description else "None"
+        new_desc = form.description.data if form.description.data else "None"
+        changes.append(f"Description changed from '{old_desc}' to '{new_desc}'")
+
+    return changes
