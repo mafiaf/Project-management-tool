@@ -1,5 +1,6 @@
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 # Association table for many-to-many relationship between Task and User
 task_user = db.Table('task_user',
@@ -49,3 +50,23 @@ class Category(db.Model):
 
     user = db.relationship('User', backref='categories')
 
+class Comment(db.Model): 
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+
+    user = db.relationship('User', backref=db.backref('comments', lazy=True))
+    task = db.relationship('Task', backref=db.backref('comments', lazy=True))
+
+
+class ActivityLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    description = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+
+    user = db.relationship('User', backref=db.backref('activity_logs', lazy=True))
+    task = db.relationship('Task', backref=db.backref('activity_logs', lazy=True))

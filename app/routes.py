@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
-from .models import User, Task, db, TaskInvitation, task_user, Category  #Model imports
-from .forms import RegistrationForm, LoginForm, TaskForm, ShareTaskForm   # Import the forms
+from .models import User, Task, db, TaskInvitation, task_user, Category, ActivityLog, Comment   #Model imports
+from .forms import RegistrationForm, LoginForm, TaskForm, ShareTaskForm, CommentForm    # Import the forms
 from .utils import login_required  # Import the login_required decorator
 import logging  # Import logging for debugging
 
@@ -111,12 +111,9 @@ def add_task():
 @login_required
 def edit_task(task_id):
     task = Task.query.get_or_404(task_id)
-
-    # Check if user has permission to edit the task (must be the owner or an editor)
     user_id = session.get('user_id')
-    task_users = [user.id for user in task.users]
 
-    if user_id not in task_users:
+    if user_id not in [user.id for user in task.users]:
         flash('You do not have permission to edit this task.', 'danger')
         return redirect(url_for('main.dashboard'))
 
@@ -125,11 +122,18 @@ def edit_task(task_id):
         task.title = form.title.data
         task.description = form.description.data
         db.session.commit()
+
+        # Log the activity
+        activity = ActivityLog(description=f"Task '{task.title}' was edited by {User.query.get(user_id).username}",
+                               user_id=user_id, task_id=task.id)
+        db.session.add(activity)
+        db.session.commit()
+
         flash('Task updated successfully!', 'success')
         return redirect(url_for('main.dashboard'))
 
-    # Pass different context values for editing a task
     return render_template('add_task.html', form=form, title="Edit Task", heading="Edit Task", submit_label="Save Changes")
+
 
 
 @main.route('/delete_task/<int:task_id>', methods=['POST'])
@@ -242,3 +246,21 @@ def decline_invitation(invitation_id):
 
     flash('Invitation declined.', 'info')
     return redirect(url_for('main.view_invitations'))
+
+
+@main.route('/task/<int:task_id>/comments', methods=['GET', 'POST'])
+@login_required
+def task_comments(task_id):
+    task = Task.query.get_or_404(task_id)
+    form = CommentForm()
+    user_id = session.get('user_id')
+
+    if form.validate_on_submit():
+        new_comment = Comment(content=form.content.data, user_id=user_id, task_id=task_id)
+        db.session.add(new_comment)
+        db.session.commit()
+        flash('Comment added successfully!', 'success')
+        return redirect(url_for('main.task_comments', task_id=task_id))
+
+    comments = Comment.query.filter_by(task_id=task_id).order_by(Comment.timestamp.desc()).all()
+    return render_template('task_comments.html', task=task, form=form, comments=comments)

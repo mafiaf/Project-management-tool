@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Comments</title>
+</head>
+<body>
+    <h1>Comments for Task: {{ task.title }}</h1>
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <p>{{ form.content.label }}</p>
+        <p>{{ form.content() }}</p>
+        <p>{{ form.submit() }}</p>
+    </form>
+
+    <h2>Previous Comments:</h2>
+    <ul>
+        {% for comment in comments %}
+            <li>
+                <strong>{{ comment.user.username }}:</strong> {{ comment.content }} <br>
+                <small>{{ comment.timestamp }}</small>
+            </li>
+        {% endfor %}
+    </ul>
+    
+    <h2>Activity Log:</h2>
+<ul>
+    {% for activity in task.activity_logs %}
+        <li>
+            <strong>{{ activity.description }}</strong> <br>
+            <small>{{ activity.timestamp }}</small>
+        </li>
+    {% endfor %}
+</ul>
+
+
+    <a href="{{ url_for('main.dashboard') }}">Back to Dashboard</a>
+</body>
+</html>

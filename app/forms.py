@@ -27,3 +27,7 @@ class ShareTaskForm(FlaskForm):
     email = StringField('User Email', validators=[DataRequired(), Email()])
     role = SelectField('Role', choices=[('Owner', 'Owner'), ('Editor', 'Editor'), ('Viewer', 'Viewer')], validators=[DataRequired()])
     submit = SubmitField('Share Task')
+
+class CommentForm(FlaskForm):
+    content = TextAreaField('Add a Comment', validators=[DataRequired()])
+    submit = SubmitField('Post Comment')
