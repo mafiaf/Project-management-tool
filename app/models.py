@@ -29,6 +29,18 @@ class Task(db.Model):
 
     category = db.relationship('Category', backref='tasks')
 
+class TaskInvitation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+    inviter_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    invitee_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    role = db.Column(db.String(50), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='Pending')  # "Pending", "Accepted", "Declined"
+
+    task = db.relationship('Task', backref='invitations')
+    inviter = db.relationship('User', foreign_keys=[inviter_id])
+    invitee = db.relationship('User', foreign_keys=[invitee_id])
+
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -36,3 +48,4 @@ class Category(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     user = db.relationship('User', backref='categories')
+

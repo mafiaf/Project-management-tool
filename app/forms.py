@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, PasswordField, SubmitField
+from wtforms import StringField, TextAreaField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Email, EqualTo, Length
 
 class RegistrationForm(FlaskForm):
@@ -22,3 +22,8 @@ class TaskForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired()])
     description = TextAreaField('Description')
     submit = SubmitField('Add Task')
+
+class ShareTaskForm(FlaskForm):
+    email = StringField('User Email', validators=[DataRequired(), Email()])
+    role = SelectField('Role', choices=[('Owner', 'Owner'), ('Editor', 'Editor'), ('Viewer', 'Viewer')], validators=[DataRequired()])
+    submit = SubmitField('Share Task')

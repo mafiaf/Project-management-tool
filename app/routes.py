@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
-from .models import User, Task, db  # Import User, Task, and db
-from .forms import RegistrationForm, LoginForm, TaskForm  # Import the forms
+from .models import User, Task, db, TaskInvitation, task_user, Category  #Model imports
+from .forms import RegistrationForm, LoginForm, TaskForm, ShareTaskForm   # Import the forms
 from .utils import login_required  # Import the login_required decorator
 import logging  # Import logging for debugging
 
@@ -66,8 +66,15 @@ def login():
 def dashboard():
     user_id = session.get('user_id')
     user = User.query.get(user_id)
-    tasks = user.tasks if user else []  # Get tasks associated with the user
-    return render_template('dashboard.html', tasks=tasks)
+
+    # Get tasks associated with the user
+    tasks = user.tasks if user else []
+
+    # Get pending invitations for the logged-in user
+    invitations = TaskInvitation.query.filter_by(invitee_id=user_id, status='Pending').all()
+
+    return render_template('dashboard.html', tasks=tasks, invitations=invitations)
+
 
 
 @main.route('/logout')
@@ -82,21 +89,22 @@ def add_task():
     form = TaskForm()
     if form.validate_on_submit():
         # Create a new task
-        new_task = Task(title=form.title.data, description=form.description.data, category_id=None)  # Set category_id as needed
+        new_task = Task(title=form.title.data, description=form.description.data, category_id=None)
         db.session.add(new_task)
+        db.session.commit()
 
-        # Associate the task with the current user
+        # Add the user as the owner of the task in the task_user table
         user_id = session.get('user_id')
-        user = User.query.get(user_id)
-        if user:
-            new_task.users.append(user)
-
+        stmt = task_user.insert().values(task_id=new_task.id, user_id=user_id, role='Owner')
+        db.session.execute(stmt)
         db.session.commit()
 
         flash('Task added successfully!', 'success')
         return redirect(url_for('main.dashboard'))
 
-    return render_template('add_task.html', form=form)
+    # Pass different context values for adding a task
+    return render_template('add_task.html', form=form, title="Add New Task", heading="Add New Task", submit_label="Add Task")
+
 
 
 @main.route('/edit_task/<int:task_id>', methods=['GET', 'POST'])
@@ -104,9 +112,11 @@ def add_task():
 def edit_task(task_id):
     task = Task.query.get_or_404(task_id)
 
+    # Check if user has permission to edit the task (must be the owner or an editor)
     user_id = session.get('user_id')
-    # Check if the user has access rights (either task creator or shared with appropriate role)
-    if not any(user.id == user_id for user in task.users) and task.category.user_id != user_id:
+    task_users = [user.id for user in task.users]
+
+    if user_id not in task_users:
         flash('You do not have permission to edit this task.', 'danger')
         return redirect(url_for('main.dashboard'))
 
@@ -115,11 +125,12 @@ def edit_task(task_id):
         task.title = form.title.data
         task.description = form.description.data
         db.session.commit()
-
         flash('Task updated successfully!', 'success')
         return redirect(url_for('main.dashboard'))
 
-    return render_template('edit_task.html', form=form, task=task)
+    # Pass different context values for editing a task
+    return render_template('add_task.html', form=form, title="Edit Task", heading="Edit Task", submit_label="Save Changes")
+
 
 @main.route('/delete_task/<int:task_id>', methods=['POST'])
 @login_required
@@ -136,3 +147,98 @@ def delete_task(task_id):
     db.session.commit()
     flash('Task deleted successfully!', 'success')
     return redirect(url_for('main.dashboard'))
+
+from sqlalchemy import and_
+
+@main.route('/share_task/<int:task_id>', methods=['GET', 'POST'])
+@login_required
+def share_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    user_id = session.get('user_id')
+
+    # Check if the logged-in user is the owner of the task
+    result = db.session.execute(
+        db.select(task_user).where(
+            and_(
+                task_user.c.task_id == task.id,
+                task_user.c.user_id == user_id,
+                task_user.c.role == 'Owner'
+            )
+        )
+    ).first()
+
+    if result is None:
+        flash('Only the owner can share this task.', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    form = ShareTaskForm()
+    if form.validate_on_submit():
+        # Find the user to share the task with
+        invitee = User.query.filter_by(email=form.email.data).first()
+        if invitee is None:
+            flash('User with that email does not exist.', 'danger')
+            return redirect(url_for('main.share_task', task_id=task.id))
+
+        # Create a new task invitation
+        invitation = TaskInvitation(task_id=task.id, inviter_id=user_id, invitee_id=invitee.id, role=form.role.data)
+        db.session.add(invitation)
+        db.session.commit()
+
+        flash(f'Invitation sent to {invitee.email} as {form.role.data}.', 'success')
+        return redirect(url_for('main.dashboard'))
+
+    return render_template('share_task.html', form=form, task=task)
+
+
+@main.route('/invitations', methods=['GET'])
+@login_required
+def view_invitations():
+    user_id = session.get('user_id')
+    invitations = TaskInvitation.query.filter_by(invitee_id=user_id, status='Pending').all()
+
+    return render_template('invitations.html', invitations=invitations)
+
+@main.route('/invitation/<int:invitation_id>/accept', methods=['POST'])
+@login_required
+def accept_invitation(invitation_id):
+    invitation = TaskInvitation.query.get_or_404(invitation_id)
+
+    # Ensure the logged-in user is the invited person
+    if invitation.invitee_id != session.get('user_id'):
+        flash('You do not have permission to perform this action.', 'danger')
+        return redirect(url_for('main.view_invitations'))
+
+    # Add user to task and set status to accepted
+    task = Task.query.get(invitation.task_id)
+    invitee = User.query.get(invitation.invitee_id)
+    task.users.append(invitee)
+
+    # Set the role for the invited user
+    stmt = task_user.update().where(
+        (task_user.c.task_id == task.id) & (task_user.c.user_id == invitee.id)
+    ).values(role=invitation.role)
+    db.session.execute(stmt)
+
+    # Update invitation status
+    invitation.status = 'Accepted'
+    db.session.commit()
+
+    flash('Invitation accepted successfully!', 'success')
+    return redirect(url_for('main.dashboard'))
+
+@main.route('/invitation/<int:invitation_id>/decline', methods=['POST'])
+@login_required
+def decline_invitation(invitation_id):
+    invitation = TaskInvitation.query.get_or_404(invitation_id)
+
+    # Ensure the logged-in user is the invited
+    if invitation.invitee_id != session.get('user_id'):
+        flash('You do not have permission to perform this action.', 'danger')
+        return redirect(url_for('main.view_invitations'))
+
+    # Update invitation status
+    invitation.status = 'Declined'
+    db.session.commit()
+
+    flash('Invitation declined.', 'info')
+    return redirect(url_for('main.view_invitations'))

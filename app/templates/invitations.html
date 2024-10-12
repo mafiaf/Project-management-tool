@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pending Invitations</title>
+</head>
+<body>
+    <h1>Pending Invitations</h1>
+    {% for invitation in invitations %}
+        <div>
+            <p>Task: {{ invitation.task.title }} (Role: {{ invitation.role }})</p>
+            <form action="{{ url_for('main.accept_invitation', invitation_id=invitation.id) }}" method="POST">
+                <button type="submit">Accept</button>
+            </form>
+            <form action="{{ url_for('main.decline_invitation', invitation_id=invitation.id) }}" method="POST">
+                <button type="submit">Decline</button>
+            </form>
+        </div>
+    {% endfor %}
+</body>
+</html>

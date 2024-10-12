@@ -3,24 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Task</title>
+    <title>{{ title }}</title>  <!-- Set title dynamically -->
 </head>
 <body>
-    <h1>Add a New Task</h1>
+    <h1>{{ heading }}</h1>  <!-- Set heading dynamically -->
 
-    <!-- Display flashed messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <ul>
-                {% for category, message in messages %}
-                    <li class="{{ category }}">{{ message }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
-
-    <!-- Task form -->
-    <form method="POST" action="">
+    <form method="POST">
         {{ form.hidden_tag() }}
         <p>
             {{ form.title.label }}<br>
@@ -28,9 +16,11 @@
         </p>
         <p>
             {{ form.description.label }}<br>
-            {{ form.description(cols=40, rows=5) }}
+            {{ form.description() }}
         </p>
-        <p>{{ form.submit() }}</p>
+        <p>
+            <input type="submit" value="{{ submit_label }}">  <!-- Dynamically set the submit button text -->
+        </p>
     </form>
 
     <a href="{{ url_for('main.dashboard') }}">Back to Dashboard</a>
