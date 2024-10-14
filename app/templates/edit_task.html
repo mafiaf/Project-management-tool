@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Task</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <h1>Edit Task</h1>
@@ -30,12 +31,13 @@
             {{ form.description.label }}<br>
             {{ form.description(cols=40, rows=5) }}
         </p>
+        <p>
+            {{ form.category.label }}<br>
+            {{ form.category() }}
+        </p>
         <p>{{ form.submit() }}</p>
     </form>
 
     <a href="{{ url_for('main.dashboard') }}">Back to Dashboard</a>
 </body>
 </html>
-
-
-

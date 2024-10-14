@@ -4,48 +4,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        /* Small CSS for button improvements, change later */
+        .btn {
+            padding: 5px 10px;
+            text-decoration: none;
+            color: #fff;
+            background-color: #007bff;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        .category-title {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+    </style>
 </head>
 <body>
     <h1>Welcome to your dashboard!</h1>
     <p>This is your user-specific page. Below are your tasks:</p>
 
-    <!-- New section to display tasks -->
-    <h2>Your Tasks:</h2>
+    <!-- Section to filter tasks by category -->
+    <form method="GET" action="{{ url_for('main.dashboard') }}">
+        <label for="category_filter">Filter by Category:</label>
+        <select name="category_filter" id="category_filter">
+            <option value="">All Categories</option>
+            {% for category in categories %}
+                <option value="{{ category.id }}" {% if category.id == selected_category %}selected{% endif %}>
+                    {{ category.name }}
+                </option>
+            {% endfor %}
+        </select>
+        <input type="submit" value="Filter" class="btn">
+    </form>
+
+    <!-- Display tasks grouped by category -->
+    {% if categories %}
+        {% for category in categories %}
+            <h2 class="category-title">{{ category.name }}</h2>
+            <ul>
+                {% if category.tasks %}
+                    {% for task in category.tasks %}
+                        <li>
+                            <strong>{{ task.title }}</strong>: {{ task.description }}
+                            <br>
+                            <!-- Links to edit, delete, share, and view comments on tasks -->
+                            <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit</a>
+                            <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                            <a href="{{ url_for('main.share_task', task_id=task.id) }}" class="btn btn-secondary">Share Task</a>
+                            <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
+                        </li>
+                    {% endfor %}
+                {% else %}
+                    <li>You have no tasks in this category.</li>
+                {% endif %}
+            </ul>
+        {% endfor %}
+    {% else %}
+        <p>You have no categories yet.</p>
+    {% endif %}
+
+    <!-- Display tasks that are not categorized -->
+    <h2>Tasks Without Category:</h2>
     <ul>
         {% if tasks %}
             {% for task in tasks %}
-                <li>
-                    <strong>{{ task.title }}</strong>: {{ task.description }}
-                    <br>
-                    <!-- Links to edit and delete tasks -->
-                    <a href="{{ url_for('main.edit_task', task_id=task.id) }}">Edit</a> |
-                    <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
-                    <a href="{{ url_for('main.share_task', task_id=task.id) }}">Share Task</a>
-                    <a href="{{ url_for('main.task_comments', task_id=task.id) }}">View Comments</a>
-                        <button type="submit">Delete</button>
-                    </form>
-                </li>
+                {% if not task.category %}
+                    <li>
+                        <strong>{{ task.title }}</strong>: {{ task.description }}
+                        <br>
+                        <!-- Links to edit, delete, share, and view comments on tasks -->
+                        <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit</a>
+                        <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                        <a href="{{ url_for('main.share_task', task_id=task.id) }}" class="btn btn-secondary">Share Task</a>
+                        <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
+                    </li>
+                {% endif %}
             {% endfor %}
         {% else %}
-            <p>You have no tasks yet.</p>
+            <p>You have no tasks without a category.</p>
         {% endif %}
-        <h2>Pending Invitations:</h2>
+    </ul>
+
+    <!-- Pending Invitations Section -->
+    <h2>Pending Invitations:</h2>
+    {% if invitations %}
         <ul>
             {% for invitation in invitations %}
                 <li>
                     <strong>Task: {{ invitation.task.title }}</strong> (Role: {{ invitation.role }})
                     <br>
-                    <a href="{{ url_for('main.accept_invitation', invitation_id=invitation.id) }}">Accept Invitation</a>
-                    <a href="{{ url_for('main.decline_invitation', invitation_id=invitation.id) }}">Decline Invitation</a>
+                    <a href="{{ url_for('main.accept_invitation', invitation_id=invitation.id) }}" class="btn">Accept Invitation</a>
+                    <a href="{{ url_for('main.decline_invitation', invitation_id=invitation.id) }}" class="btn btn-danger">Decline Invitation</a>
                 </li>
             {% endfor %}
         </ul>
-    </ul>
+    {% else %}
+        <p>You have no pending invitations.</p>
+    {% endif %}
 
     <!-- Link to add a new task -->
-    <a href="{{ url_for('main.add_task') }}">Add New Task</a><br>
+    <a href="{{ url_for('main.add_task') }}" class="btn">Add New Task</a><br><br>
 
     <!-- Logout link -->
-    <a href="{{ url_for('main.logout') }}">Logout</a>
+    <a href="{{ url_for('main.logout') }}" class="btn btn-secondary">Logout</a>
 </body>
 </html>

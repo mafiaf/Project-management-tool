@@ -8,20 +8,25 @@
 <body>
     <h1>{{ heading }}</h1>  <!-- Set heading dynamically -->
 
-    <form method="POST">
+    <form method="POST" action="{{ url_for('main.add_task') }}">
         {{ form.hidden_tag() }}
-        <p>
+        <div>
             {{ form.title.label }}<br>
             {{ form.title(size=32) }}
-        </p>
-        <p>
+        </div>
+        <div>
             {{ form.description.label }}<br>
-            {{ form.description() }}
-        </p>
-        <p>
-            <input type="submit" value="{{ submit_label }}">  <!-- Dynamically set the submit button text -->
-        </p>
+            {{ form.description(rows=4) }}
+        </div>
+        <div>
+            {{ form.category.label }}<br>
+            {{ form.category() }}
+        </div>
+        <div>
+            <button type="submit">{{ submit_label }}</button>
+        </div>
     </form>
+    
 
     <a href="{{ url_for('main.dashboard') }}">Back to Dashboard</a>
 </body>

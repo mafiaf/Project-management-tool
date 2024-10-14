@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, redirect
 from .models import User, Task, db, TaskInvitation, task_user, Category, ActivityLog, Comment   #Model imports
-from .forms import RegistrationForm, LoginForm, TaskForm, ShareTaskForm, CommentForm    # Import the forms
+from .forms import RegistrationForm, LoginForm, TaskForm, ShareTaskForm, CommentForm, CategoryForm    # Import the forms
 from .utils import login_required  # Import the login_required decorator
 import logging  # Import logging for debugging
 
@@ -61,20 +61,27 @@ def login():
             flash('Login failed. Please check your email and password.', 'danger')
     return render_template('login.html', form=form)
 
-@main.route('/dashboard')
+@main.route('/dashboard', methods=['GET'])
 @login_required
 def dashboard():
     user_id = session.get('user_id')
-    user = User.query.get(user_id)
+    
+    # Get the selected category filter from the request
+    selected_category = request.args.get('category_filter', type=int)
 
-    # Get tasks associated with the user
-    tasks = user.tasks if user else []
+    # Get all categories owned by the logged-in user
+    categories = Category.query.filter_by(user_id=user_id).all()
+
+    # Filter tasks based on selected category if provided, otherwise get all tasks
+    if selected_category is not None and selected_category != "":
+        tasks = Task.query.filter_by(user_id=user_id, category_id=selected_category).all()
+    else:
+        tasks = Task.query.filter_by(user_id=user_id).all()
 
     # Get pending invitations for the logged-in user
     invitations = TaskInvitation.query.filter_by(invitee_id=user_id, status='Pending').all()
 
-    return render_template('dashboard.html', tasks=tasks, invitations=invitations)
-
+    return render_template('dashboard.html', categories=categories, tasks=tasks, invitations=invitations, selected_category=selected_category)
 
 
 @main.route('/logout')
@@ -86,21 +93,52 @@ def logout():
 @main.route('/add_task', methods=['GET', 'POST'])
 @login_required
 def add_task():
+    user_id = session.get('user_id')
+
+    # Set up the task form and add category choices for the logged-in user
     form = TaskForm()
+    categories = Category.query.filter_by(user_id=user_id).all()
+
+    # Add category choices, including a "No Category" option with value -1
+    form.category.choices = [(-1, "No Category")] + [(c.id, c.name) for c in categories]
+
     if form.validate_on_submit():
-        # Create a new task
-        new_task = Task(title=form.title.data, description=form.description.data, category_id=None)
-        db.session.add(new_task)
-        db.session.commit()
+        # Set category_id to None if "No Category" is selected
+        category_id = form.category.data
+        if category_id == -1:
+            category_id = None
 
-        # Add the user as the owner of the task in the task_user table
-        user_id = session.get('user_id')
-        stmt = task_user.insert().values(task_id=new_task.id, user_id=user_id, role='Owner')
-        db.session.execute(stmt)
-        db.session.commit()
+        try:
+            # Create a new task with the selected category and assign user_id
+            new_task = Task(
+                title=form.title.data,
+                description=form.description.data,
+                category_id=category_id,
+                user_id=user_id  # Associate task with the logged-in user
+            )
+            db.session.add(new_task)
+            db.session.commit()
 
-        flash('Task added successfully!', 'success')
-        return redirect(url_for('main.dashboard'))
+            # Add the user as the owner of the task in the task_user table
+            stmt = task_user.insert().values(task_id=new_task.id, user_id=user_id, role='Owner')
+            db.session.execute(stmt)
+            db.session.commit()
+
+            # Log task creation activity
+            activity = ActivityLog(
+                description=f"Task '{new_task.title}' created by user {user_id}",
+                user_id=user_id,
+                task_id=new_task.id
+            )
+            db.session.add(activity)
+            db.session.commit()
+
+            flash('Task added successfully!', 'success')
+            return redirect(url_for('main.dashboard'))
+        except Exception as e:
+            db.session.rollback()  # Rollback in case of an error
+            flash(f'An error occurred while adding the task: {str(e)}', 'danger')
+            print(f"Error occurred: {e}")
 
     # Pass different context values for adding a task
     return render_template('add_task.html', form=form, title="Add New Task", heading="Add New Task", submit_label="Add Task")
@@ -113,36 +151,46 @@ def edit_task(task_id):
     task = Task.query.get_or_404(task_id)
     user_id = session.get('user_id')
 
-    if user_id not in [user.id for user in task.users]:
+    # Ensure user has permission to edit
+    if user_id != task.user_id:
         flash('You do not have permission to edit this task.', 'danger')
         return redirect(url_for('main.dashboard'))
 
     form = TaskForm(obj=task)
+    
+    # Populate the category field choices
+    categories = Category.query.filter_by(user_id=user_id).all()
+    form.category.choices = [(-1, "No Category")] + [(c.id, c.name) for c in categories]
+
     if form.validate_on_submit():
-        # Get the detailed changes before updating the task
+        # Track changes made to the task
         changes = get_task_changes(task, form)
 
         # Update the task with new data
         task.title = form.title.data
         task.description = form.description.data
+        category_id = form.category.data
+        if category_id == -1:
+            task.category_id = None
+        else:
+            task.category_id = category_id
+
         db.session.commit()
 
-        # Log the detailed changes
+        # Log each change
         for change in changes:
             activity = ActivityLog(
-                description=f"Task '{task.title}' was updated by {User.query.get(user_id).username}: {change}",
+                description=change,
                 user_id=user_id,
                 task_id=task.id
             )
             db.session.add(activity)
-
         db.session.commit()
 
         flash('Task updated successfully!', 'success')
         return redirect(url_for('main.dashboard'))
 
-    return render_template('add_task.html', form=form, title="Edit Task", heading="Edit Task", submit_label="Save Changes")
-
+    return render_template('edit_task.html', form=form, title="Edit Task", heading="Edit Task", submit_label="Save Changes")
 
 
 
@@ -288,3 +336,49 @@ def get_task_changes(task, form):
         changes.append(f"Description changed from '{old_desc}' to '{new_desc}'")
 
     return changes
+
+@main.route('/categories', methods=['GET', 'POST'])
+@login_required
+def categories():
+    form = CategoryForm()
+    user_id = session.get('user_id')
+    if form.validate_on_submit():
+        category = Category(name=form.name.data, description=form.description.data, user_id=user_id)
+        db.session.add(category)
+        db.session.commit()
+        flash('Category created successfully!', 'success')
+        return redirect(url_for('main.categories'))
+
+    user_categories = Category.query.filter_by(user_id=user_id).all()
+    return render_template('categories.html', form=form, categories=user_categories)
+
+@main.route('/edit_category/<int:category_id>', methods=['GET', 'POST'])
+@login_required
+def edit_category(category_id):
+    category = Category.query.get_or_404(category_id)
+    if category.user_id != session.get('user_id'):
+        flash('You do not have permission to edit this category.', 'danger')
+        return redirect(url_for('main.categories'))
+
+    form = CategoryForm(obj=category)
+    if form.validate_on_submit():
+        category.name = form.name.data
+        category.description = form.description.data
+        db.session.commit()
+        flash('Category updated successfully!', 'success')
+        return redirect(url_for('main.categories'))
+
+    return render_template('edit_category.html', form=form, title='Edit Category')
+
+@main.route('/delete_category/<int:category_id>', methods=['POST'])
+@login_required
+def delete_category(category_id):
+    category = Category.query.get_or_404(category_id)
+    if category.user_id != session.get('user_id'):
+        flash('You do not have permission to delete this category.', 'danger')
+        return redirect(url_for('main.categories'))
+
+    db.session.delete(category)
+    db.session.commit()
+    flash('Category deleted successfully!', 'success')
+    return redirect(url_for('main.categories'))
