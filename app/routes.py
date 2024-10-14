@@ -343,42 +343,88 @@ def categories():
     form = CategoryForm()
     user_id = session.get('user_id')
     if form.validate_on_submit():
-        category = Category(name=form.name.data, description=form.description.data, user_id=user_id)
-        db.session.add(category)
+        # Create a new category
+        new_category = Category(
+            name=form.name.data,
+            description=form.description.data,
+            user_id=user_id
+        )
+        db.session.add(new_category)
         db.session.commit()
+
+        # Log activity for creating a category
+        activity = ActivityLog(
+            description=f"Category '{new_category.name}' created by user {user_id}",
+            user_id=user_id,
+            category_id=new_category.id
+        )
+        db.session.add(activity)
+        db.session.commit()
+
         flash('Category created successfully!', 'success')
         return redirect(url_for('main.categories'))
 
+    # Get all categories owned by the user
     user_categories = Category.query.filter_by(user_id=user_id).all()
     return render_template('categories.html', form=form, categories=user_categories)
+
 
 @main.route('/edit_category/<int:category_id>', methods=['GET', 'POST'])
 @login_required
 def edit_category(category_id):
     category = Category.query.get_or_404(category_id)
-    if category.user_id != session.get('user_id'):
+    user_id = session.get('user_id')
+
+    if category.user_id != user_id:
         flash('You do not have permission to edit this category.', 'danger')
         return redirect(url_for('main.categories'))
 
     form = CategoryForm(obj=category)
     if form.validate_on_submit():
+        # Update category data
+        old_name = category.name
         category.name = form.name.data
         category.description = form.description.data
         db.session.commit()
+
+        # Log activity for editing a category
+        activity = ActivityLog(
+            description=f"Category '{old_name}' updated to '{category.name}' by user {user_id}",
+            user_id=user_id,
+            task_id=None
+        )
+        db.session.add(activity)
+        db.session.commit()
+
         flash('Category updated successfully!', 'success')
         return redirect(url_for('main.categories'))
 
     return render_template('edit_category.html', form=form, title='Edit Category')
 
+
 @main.route('/delete_category/<int:category_id>', methods=['POST'])
 @login_required
 def delete_category(category_id):
     category = Category.query.get_or_404(category_id)
-    if category.user_id != session.get('user_id'):
+    user_id = session.get('user_id')
+
+    if category.user_id != user_id:
         flash('You do not have permission to delete this category.', 'danger')
         return redirect(url_for('main.categories'))
 
     db.session.delete(category)
     db.session.commit()
+
+    # Log activity for deleting a category
+    activity = ActivityLog(
+        description=f"Category '{category.name}' deleted by user {user_id}",
+        user_id=user_id,
+        task_id=None
+    )
+    db.session.add(activity)
+    db.session.commit()
+
     flash('Category deleted successfully!', 'success')
     return redirect(url_for('main.categories'))
+
+

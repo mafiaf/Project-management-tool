@@ -54,10 +54,14 @@ class ActivityLog(db.Model):
     description = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=True)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)
 
     user = db.relationship('User', backref=db.backref('activity_logs', lazy=True))
     task = db.relationship('Task', backref=db.backref('activity_logs', lazy=True))
+    category = db.relationship('Category', backref=db.backref('activity_logs', lazy=True))
+
+
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -115,10 +115,11 @@
         <p>You have no pending invitations.</p>
     {% endif %}
 
-    <!-- Link to add a new task -->
+    <!-- Links -->
     <a href="{{ url_for('main.add_task') }}" class="btn">Add New Task</a><br><br>
 
-    <!-- Logout link -->
+    <a href="{{ url_for('main.categories') }}" class="btn btn-secondary">Manage Categories</a><br><br>
+
     <a href="{{ url_for('main.logout') }}" class="btn btn-secondary">Logout</a>
 </body>
 </html>
