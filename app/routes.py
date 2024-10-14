@@ -381,19 +381,26 @@ def edit_category(category_id):
 
     form = CategoryForm(obj=category)
     if form.validate_on_submit():
+        # Track changes
+        changes = []
+        if category.name != form.name.data:
+            changes.append(f"Category name changed from '{category.name}' to '{form.name.data}'")
+        if category.description != form.description.data:
+            changes.append(f"Category description changed from '{category.description}' to '{form.description.data}'")
+
         # Update category data
-        old_name = category.name
         category.name = form.name.data
         category.description = form.description.data
         db.session.commit()
 
-        # Log activity for editing a category
-        activity = ActivityLog(
-            description=f"Category '{old_name}' updated to '{category.name}' by user {user_id}",
-            user_id=user_id,
-            task_id=None
-        )
-        db.session.add(activity)
+        # Log each change
+        for change in changes:
+            activity = ActivityLog(
+                description=change,
+                user_id=user_id,
+                category_id=category.id
+            )
+            db.session.add(activity)
         db.session.commit()
 
         flash('Category updated successfully!', 'success')

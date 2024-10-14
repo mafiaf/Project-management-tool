@@ -47,6 +47,14 @@
                     <form action="{{ url_for('main.delete_category', category_id=category.id) }}" method="POST" style="display:inline;">
                         <button type="submit" class="btn btn-danger">Delete</button>
                     </form>
+                    
+                    <!-- Display activity log for the category -->
+                    <h3>Activity Log:</h3>
+                    <ul>
+                        {% for activity in category.activity_logs %}
+                            <li>{{ activity.timestamp }} - {{ activity.description }}</li>
+                        {% endfor %}
+                    </ul>
                 </li>
             {% endfor %}
         </ul>
@@ -54,6 +62,4 @@
         <p>You have no categories yet.</p>
     {% endif %}
 
-    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
-</body>
-</html>
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard
