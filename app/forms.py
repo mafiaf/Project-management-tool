@@ -35,4 +35,4 @@ class CommentForm(FlaskForm):
 class CategoryForm(FlaskForm):
     name = StringField('Category Name', validators=[DataRequired()])
     description = TextAreaField('Description')
-    submit = SubmitField('Save Category')
+    submit = SubmitField('Save Category') 

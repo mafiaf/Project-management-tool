@@ -65,7 +65,7 @@ def login():
 @login_required
 def dashboard():
     user_id = session.get('user_id')
-    
+
     # Get the selected category filter from the request
     selected_category = request.args.get('category_filter', type=int)
 
@@ -73,10 +73,10 @@ def dashboard():
     categories = Category.query.filter_by(user_id=user_id).all()
 
     # Filter tasks based on selected category if provided, otherwise get all tasks
-    if selected_category is not None and selected_category != "":
+    if selected_category is not None:
         tasks = Task.query.filter_by(user_id=user_id, category_id=selected_category).all()
     else:
-        tasks = Task.query.filter_by(user_id=user_id).all()
+        tasks = []
 
     # Get pending invitations for the logged-in user
     invitations = TaskInvitation.query.filter_by(invitee_id=user_id, status='Pending').all()
