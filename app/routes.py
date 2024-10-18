@@ -342,11 +342,16 @@ def get_task_changes(task, form):
 def categories():
     form = CategoryForm()
     user_id = session.get('user_id')
+
     if form.validate_on_submit():
-        # Create a new category
+        # Convert color to a string representation
+        color_value = str(form.color.data) if isinstance(form.color.data, str) else form.color.data.hex
+
+        # Create a new category with color
         new_category = Category(
             name=form.name.data,
             description=form.description.data,
+            color=color_value,  # Save color as a hex value string
             user_id=user_id
         )
         db.session.add(new_category)
@@ -369,6 +374,9 @@ def categories():
     return render_template('categories.html', form=form, categories=user_categories)
 
 
+
+
+
 @main.route('/edit_category/<int:category_id>', methods=['GET', 'POST'])
 @login_required
 def edit_category(category_id):
@@ -387,10 +395,13 @@ def edit_category(category_id):
             changes.append(f"Category name changed from '{category.name}' to '{form.name.data}'")
         if category.description != form.description.data:
             changes.append(f"Category description changed from '{category.description}' to '{form.description.data}'")
+        if category.color != form.color.data:
+            changes.append(f"Category color changed from '{category.color}' to '{form.color.data}'")
 
         # Update category data
         category.name = form.name.data
         category.description = form.description.data
+        category.color = form.color.data
         db.session.commit()
 
         # Log each change
@@ -406,7 +417,8 @@ def edit_category(category_id):
         flash('Category updated successfully!', 'success')
         return redirect(url_for('main.categories'))
 
-    return render_template('edit_category.html', form=form, title='Edit Category')
+    return render_template('edit_category.html', form=form, title='Edit Category', category=category)
+
 
 
 @main.route('/delete_category/<int:category_id>', methods=['POST'])
@@ -433,5 +445,22 @@ def delete_category(category_id):
 
     flash('Category deleted successfully!', 'success')
     return redirect(url_for('main.categories'))
+
+@main.route('/add_category', methods=['POST'])
+@login_required
+def add_category():
+    user_id = session.get('user_id')
+    category_name = request.form.get('categoryName')
+    category_color = request.form.get('categoryColor', '#007bff') 
+
+    if category_name:
+        new_category = Category(name=category_name, color=category_color, user_id=user_id)
+        db.session.add(new_category)
+        db.session.commit()
+        flash(f"Category '{category_name}' has been successfully created.", "success")
+    else:
+        flash("Category name is required.", "error")
+
+    return redirect(url_for('main.dashboard'))
 
 

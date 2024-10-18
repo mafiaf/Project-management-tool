@@ -20,19 +20,25 @@
         {% endif %}
     {% endwith %}
 
-    <!-- Form for adding a new category -->
-    <form method="POST">
-        {{ form.hidden_tag() }}
-        <p>
-            {{ form.name.label }}<br>
-            {{ form.name(size=32) }}
-        </p>
-        <p>
-            {{ form.description.label }}<br>
-            {{ form.description(rows=4) }}
-        </p>
-        <p>{{ form.submit() }}</p>
-    </form>
+<!-- Form for adding a new category -->
+<form method="POST" action="{{ url_for('main.categories') }}">
+    {{ form.hidden_tag() }}  <!-- CSRF token to protect the form -->
+    <p>
+        {{ form.name.label }}<br>
+        {{ form.name(size=32) }}
+    </p>
+    <p>
+        {{ form.description.label }}<br>
+        {{ form.description(rows=4) }}
+    </p>
+    <p>
+        {{ form.color.label }}<br>
+        {{ form.color() }}
+    </p>
+    <p>{{ form.submit() }}</p>
+</form>
+
+    
 
     <!-- Display all categories -->
     <h2>Your Categories:</h2>

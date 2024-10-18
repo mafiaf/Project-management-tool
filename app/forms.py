@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional
+from wtforms_components import ColorField
 
 class RegistrationForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
@@ -35,4 +36,5 @@ class CommentForm(FlaskForm):
 class CategoryForm(FlaskForm):
     name = StringField('Category Name', validators=[DataRequired()])
     description = TextAreaField('Description')
-    submit = SubmitField('Save Category') 
+    color = ColorField('Color', default='#007bff')
+    submit = SubmitField('Save Category')

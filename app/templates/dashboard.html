@@ -11,25 +11,42 @@
 <body>
     <h1>Welcome to your dashboard!</h1>
 
-    <!-- Circular container for category navigation -->
-    <div class="categories-column">
-        <div class="circular-container">
-            {% if categories %}
-                {% for category in categories %}
-                    <div class="category-node" data-category-id="{{ category.id }}">
-                        <a href="{{ url_for('main.dashboard', category_filter=category.id) }}" style="color: #ffffff; text-decoration: none;">{{ category.name }}</a>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p>You have no categories yet.</p>
-            {% endif %}
-            <!-- Button to add a new category, positioned at the center -->
-            <button id="add-category-btn" class="add-category-node">+</button>
+<!-- Circular container for category navigation -->
+<div class="categories-column">
+    {% if not categories %}
+        <p class="no-categories-message">You have no categories yet. Click the green button to add one.</p>
+    {% endif %}
+    <div class="circular-container">
+        {% if categories %}
+            {% for category in categories %}
+            <div class="category-node" data-category-id="{{ category.id }}" style="background-color: {{ category.color | safe }};">
+                <a href="{{ url_for('main.dashboard', category_filter=category.id) }}" style="color: #ffffff; text-decoration: none;">
+                    {{ category.name }}
+                </a>
+            </div>                                
+            {% endfor %}
+        {% endif %}
+        <!-- Button to add a new category, positioned at the center -->
+        <button id="add-category-btn" class="add-category-node">+</button>
+    </div>
+</div>
+
+
+
+    <!-- Modal for creating a new category -->
+    <div id="categoryModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeModal">&times;</span>
+            <h2>Create New Category</h2>
+            <form id="categoryForm" method="POST" action="{{ url_for('main.add_category') }}">
+                <label for="categoryName">Category Name:</label>
+                <input type="text" id="categoryName" name="categoryName" required>
+                <label for="categoryColor">Category Color:</label>
+                <input type="color" id="categoryColor" name="categoryColor" value="#007bff">
+                <button type="submit" class="btn">Create Category</button>
+            </form>
         </div>
     </div>
-    
-    
-    
 
     <!-- Display tasks grouped by selected category -->
     <h2>Tasks for Selected Category:</h2>
@@ -74,26 +91,55 @@
     <a href="{{ url_for('main.add_task') }}" class="btn">Add New Task</a><br><br>
     <a href="{{ url_for('main.logout') }}" class="btn btn-secondary">Logout</a>
 
-    <!-- JavaScript to position nodes in a circular layout -->
-    <script src="{{ url_for('static', filename='js/circular_layout.js') }}"></script>
-<!-- JavaScript to position nodes in a circular layout -->
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const nodes = document.querySelectorAll('.category-node');
-        const container = document.querySelector('.circular-container');
-        const radius = container.offsetWidth / 2 - 80; // Adjust radius if needed
-        const angleStep = (2 * Math.PI) / nodes.length;
-
-        nodes.forEach((node, index) => {
-            const angle = index * angleStep;
-            const x = radius * Math.cos(angle) + container.offsetWidth / 2 - node.offsetWidth / 2;
-            const y = radius * Math.sin(angle) + container.offsetHeight / 2 - node.offsetHeight / 2;
-            node.style.position = 'absolute';
-            node.style.left = `${x}px`;
-            node.style.top = `${y}px`;
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            setTimeout(() => {
+                const circularContainer = document.querySelector(".circular-container");
+                const nodes = document.querySelectorAll(".category-node");
+                const addButton = document.getElementById("add-category-btn");
+    
+                if (!circularContainer || !addButton) {
+                    return; // Exit if elements aren't found
+                }
+    
+                // Define radius and center position
+                const radius = circularContainer.offsetWidth / 2 - 80; // Adjust radius if needed
+                const centerX = circularContainer.offsetWidth / 2;
+                const centerY = circularContainer.offsetHeight / 2;
+    
+                // Position nodes in a circular layout
+                if (nodes.length > 0) {
+                    const angleStep = (2 * Math.PI) / nodes.length;
+    
+                    nodes.forEach((node, index) => {
+                        const angle = index * angleStep;
+                        const x = centerX + radius * Math.cos(angle) - node.offsetWidth / 2;
+                        const y = centerY + radius * Math.sin(angle) - node.offsetHeight / 2;
+    
+                        node.style.position = "absolute";
+                        node.style.left = `${x}px`;
+                        node.style.top = `${y}px`;
+                    });
+                }
+    
+                // Position the add button in the center
+                addButton.style.position = "absolute";
+                addButton.style.left = `${centerX - addButton.offsetWidth / 2}px`;
+                addButton.style.top = `${centerY - addButton.offsetHeight / 2}px`;
+                addButton.style.zIndex = 20; // Ensure the add button is above category nodes
+    
+                // Add event listener to the add button for category addition
+                addButton.addEventListener('click', function (event) {
+                    event.preventDefault(); // Prevent any default behavior, like form submission
+                    // Here you can open a modal or redirect to a form to add a new category
+                    window.location.href = "{{ url_for('main.categories') }}";
+                });
+            }, 100); // Add a small delay to ensure the container is fully rendered
         });
-    });
-</script>
+    </script>
+    
+    
+    
 </body>
 
 </html>

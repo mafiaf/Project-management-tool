@@ -31,8 +31,13 @@
             {{ form.description.label }}<br>
             {{ form.description(rows=4) }}
         </p>
+        <p>
+            {{ form.color.label }}<br>
+            {{ form.color() }}
+        </p>
         <p>{{ form.submit() }}</p>
     </form>
+    
 
     <a href="{{ url_for('main.categories') }}">Back to Categories</a>
 </body>

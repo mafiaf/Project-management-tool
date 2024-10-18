@@ -1,20 +1,27 @@
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #28a745;
+    --node-size: 100px;
+    --add-btn-size: 60px;
+}
+
 .circular-container {
-    position: relative;  /* Needed for absolute positioning inside */
-    width: 500px;        /* Adjust width */
-    height: 500px;       /* Adjust height */
-    margin: 0 auto;      /* Center horizontally */
-    border: 2px dashed #ccc;
+    position: relative; 
+    width: 500px; 
+    height: 500px; 
+    margin: 0 auto; 
+    border: 2px dashed #ccc; /* Change border color to red to clearly see it */
     border-radius: 50%;
 }
 
 .category-node {
-    width: 100px; /* Increase size for better visibility */
-    height: 100px;
+    width: var(--node-size); 
+    height: var(--node-size);
     border-radius: 50%;
-    background-color: #007bff;
+    background-color: var(--primary-color);
     color: #ffffff;
     text-align: center;
-    line-height: 100px; /* Ensure the text is vertically centered */
+    line-height: var(--node-size); /* Ensure the text is vertically centered */
     position: absolute;
     cursor: pointer;
     display: flex;
@@ -22,6 +29,12 @@
     justify-content: center;
     z-index: 5;
     font-size: 1em; 
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.category-node:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
 .add-category-node {
@@ -30,15 +43,89 @@
     border-radius: 50%;
     background-color: green;
     color: white;
-    border: none;
+    border: 2px solid black; /* Border to visualize the button position */
     cursor: pointer;
     font-size: 1.5em;
     position: absolute;  
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10;  
+    top: calc(50% - 30px); /* Adjusted calculation for more precision */
+    left: calc(50% - 30px); /* Adjusted calculation for more precision */
+    transform: translate(0, 0); /* Removing this to make centering more predictable */
+    z-index: 20;  
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.add-category-node:hover {
+    background-color: darkgreen; /* Change color on hover, but keep the button size */
+}
+
+.no-categories-message {
+    text-align: center;
+    color: #ff0000; /* Adjust the color to make it more visible */
+    font-weight: bold;
+    margin-bottom: 15px; /* Add some spacing between the message and the container */
+}
+
+
+/*smaller screens */
+@media screen and (max-width: 768px) {
+    .circular-container {
+        width: 300px;  
+        height: 300px; 
+
+    .category-node {
+        width: 70px;   
+        height: 70px;
+        font-size: 0.8em;  
+        line-height: 70px; 
+    }
+
+    .add-category-node {
+        width: 50px;   
+        height: 50px;
+        font-size: 1.2em;  
+    }
+     }
+}
+
+/* Modal container - hidden by default */
+.modal {
+    display: none;  /* Hidden by default */
+    position: fixed;  /* Stay in place */
+    z-index: 50;  /* Sit on top of other elements */
+    left: 0;
+    top: 0;
+    width: 100%;  /* Full width */
+    height: 100%;  /* Full height */
+    overflow: auto;  /* Enable scroll if needed */
+    background-color: rgba(0, 0, 0, 0.4);  /* Black background with opacity */
+}
+
+/* Modal content */
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;  /* 15% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;  /* Could be more or less, depending on screen size */
+    max-width: 400px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* Close button (×) */
+.close-btn {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-btn:hover,
+.close-btn:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
 }
