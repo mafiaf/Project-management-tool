@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, redirect
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, redirect, jsonify
 from .models import User, Task, db, TaskInvitation, task_user, Category, ActivityLog, Comment   #Model imports
 from .forms import RegistrationForm, LoginForm, TaskForm, ShareTaskForm, CommentForm, CategoryForm    # Import the forms
 from .utils import login_required  # Import the login_required decorator
@@ -93,7 +93,11 @@ def logout():
 @main.route('/add_task', methods=['GET', 'POST'])
 @login_required
 def add_task():
+    """Route to add a new task, optionally within a specific category"""
     user_id = session.get('user_id')
+
+    # Retrieve category_id from query parameters if available
+    category_id = request.args.get('category_id', type=int)
 
     # Set up the task form and add category choices for the logged-in user
     form = TaskForm()
@@ -102,18 +106,22 @@ def add_task():
     # Add category choices, including a "No Category" option with value -1
     form.category.choices = [(-1, "No Category")] + [(c.id, c.name) for c in categories]
 
+    # If a category_id is provided, set the default value in the form
+    if category_id is not None:
+        form.category.data = category_id
+
     if form.validate_on_submit():
         # Set category_id to None if "No Category" is selected
-        category_id = form.category.data
-        if category_id == -1:
-            category_id = None
+        selected_category_id = form.category.data
+        if selected_category_id == -1:
+            selected_category_id = None
 
         try:
             # Create a new task with the selected category and assign user_id
             new_task = Task(
                 title=form.title.data,
                 description=form.description.data,
-                category_id=category_id,
+                category_id=selected_category_id,
                 user_id=user_id  # Associate task with the logged-in user
             )
             db.session.add(new_task)
@@ -138,9 +146,8 @@ def add_task():
         except Exception as e:
             db.session.rollback()  # Rollback in case of an error
             flash(f'An error occurred while adding the task: {str(e)}', 'danger')
-            print(f"Error occurred: {e}")
+            logger.error(f"Error occurred: {e}")
 
-    # Pass different context values for adding a task
     return render_template('add_task.html', form=form, title="Add New Task", heading="Add New Task", submit_label="Add Task")
 
 
@@ -373,35 +380,58 @@ def categories():
     user_categories = Category.query.filter_by(user_id=user_id).all()
     return render_template('categories.html', form=form, categories=user_categories)
 
+@main.route('/category/<int:category_id>', methods=['GET'])
+@login_required
+def view_category(category_id):
+    """Route to view the details of a specific category and its tasks"""
+    user_id = session.get('user_id')
+    category = Category.query.filter_by(id=category_id, user_id=user_id).first_or_404()
+
+    # Get all tasks in the selected category
+    tasks = Task.query.filter_by(category_id=category_id).all()
+
+    return render_template('view_category.html', category=category, tasks=tasks)
 
 
-
-
-@main.route('/edit_category/<int:category_id>', methods=['GET', 'POST'])
+@main.route('/edit_category/<int:category_id>', methods=['POST'])
 @login_required
 def edit_category(category_id):
-    category = Category.query.get_or_404(category_id)
-    user_id = session.get('user_id')
+    try:
+        category = Category.query.get_or_404(category_id)
+        user_id = session.get('user_id')
 
-    if category.user_id != user_id:
-        flash('You do not have permission to edit this category.', 'danger')
-        return redirect(url_for('main.categories'))
+        # Ensure the user has permission to edit the category
+        if category.user_id != user_id:
+            return jsonify({'error': 'You do not have permission to edit this category.'}), 403
 
-    form = CategoryForm(obj=category)
-    if form.validate_on_submit():
-        # Track changes
+        # Get data from JSON request
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid request data.'}), 400
+
+        # Update category fields with the data from the request
+        name = data.get('categoryName')
+        description = data.get('categoryDescription')
+        color = data.get('categoryColor')
+
+        if not name or not color:
+            return jsonify({'error': 'Name and color fields are required.'}), 400
+
+        # Track changes for logging purposes
         changes = []
-        if category.name != form.name.data:
-            changes.append(f"Category name changed from '{category.name}' to '{form.name.data}'")
-        if category.description != form.description.data:
-            changes.append(f"Category description changed from '{category.description}' to '{form.description.data}'")
-        if category.color != form.color.data:
-            changes.append(f"Category color changed from '{category.color}' to '{form.color.data}'")
+        if category.name != name:
+            changes.append(f"Category name changed from '{category.name}' to '{name}'")
+        if category.description != description:
+            changes.append(f"Category description changed from '{category.description}' to '{description}'")
+        if category.color != color:
+            changes.append(f"Category color changed from '{category.color}' to '{color}'")
 
-        # Update category data
-        category.name = form.name.data
-        category.description = form.description.data
-        category.color = form.color.data
+        # Update category
+        category.name = name
+        category.description = description
+        category.color = color
+
+        # Commit changes to the database
         db.session.commit()
 
         # Log each change
@@ -412,12 +442,16 @@ def edit_category(category_id):
                 category_id=category.id
             )
             db.session.add(activity)
+
         db.session.commit()
 
-        flash('Category updated successfully!', 'success')
-        return redirect(url_for('main.categories'))
+        return jsonify({'success': 'Category updated successfully.'}), 200
 
-    return render_template('edit_category.html', form=form, title='Edit Category', category=category)
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error occurred: {e}")  # Print the error for debugging
+        return jsonify({'error': 'An error occurred while updating the category.'}), 500
+
 
 
 
@@ -464,3 +498,22 @@ def add_category():
     return redirect(url_for('main.dashboard'))
 
 
+@main.route('/mark_all_completed/<int:category_id>', methods=['POST'])
+@login_required
+def mark_all_completed(category_id):
+    """Route to mark all tasks in a category as completed"""
+    # Retrieve the category
+    category = Category.query.get_or_404(category_id)
+
+    # Ensure the logged-in user owns the category
+    if category.user_id != session.get('user_id'):
+        flash('You do not have permission to mark tasks in this category as completed.', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    # Logic to mark all tasks as completed
+    for task in category.tasks:
+        task.completed = True
+    db.session.commit()
+    
+    flash('All tasks marked as completed!', 'success')
+    return redirect(url_for('main.dashboard'))

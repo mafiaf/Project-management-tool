@@ -18,5 +18,21 @@
             </form>
         </div>
     {% endfor %}
+
+        <!-- Pending Invitations Section -->
+        {% if invitations %}
+        <ul>
+            {% for invitation in invitations %}
+                <li>
+                    <strong>Task: {{ invitation.task.title }}</strong> (Role: {{ invitation.role }})
+                    <br>
+                    <a href="{{ url_for('main.accept_invitation', invitation_id=invitation.id) }}" class="btn">Accept Invitation</a>
+                    <a href="{{ url_for('main.decline_invitation', invitation_id=invitation.id) }}" class="btn btn-danger">Decline Invitation</a>
+                </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+            <p>You have no pending invitations.</p>
+        {% endif %}
 </body>
 </html>

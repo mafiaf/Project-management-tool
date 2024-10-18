@@ -9,137 +9,146 @@
 </head>
 
 <body>
+    <div class="top-right-icons">
+        <!-- Icon for Pending Invitations -->
+        <div class="icon-container" data-url="{{ url_for('main.view_invitations') }}">
+            <img src="{{ url_for('static', filename='icons/invitation-icon.png') }}" alt="Pending Invitations" title="Pending Invitations">
+        </div>
+        <!-- Icon for Adding a New Task -->
+        <div class="icon-container" data-url="{{ url_for('main.add_task') }}">
+            <img src="{{ url_for('static', filename='icons/add-task-icon.png') }}" alt="Add New Task" title="Add New Task">
+        </div>
+        <!-- Icon for Logout -->
+        <div class="icon-container" data-url="{{ url_for('main.logout') }}">
+            <img src="{{ url_for('static', filename='icons/logout-icon.png') }}" alt="Logout" title="Logout">
+        </div>
+    </div>
+        
     <h1>Welcome to your dashboard!</h1>
 
-<!-- Circular container for category navigation -->
-<div class="categories-column">
+<!-- Grid container for category navigation -->
+<div class="categories-grid">
     {% if not categories %}
-        <p class="no-categories-message">You have no categories yet. Click the green button to add one.</p>
+        <p class="no-categories-message">You have no categories yet. Click the add button to create one.</p>
     {% endif %}
-    <div class="circular-container">
+    <div class="grid-container">
         {% if categories %}
-            {% for category in categories %}
-            <div class="category-node" data-category-id="{{ category.id }}" style="background-color: {{ category.color | safe }};">
-                <a href="{{ url_for('main.dashboard', category_filter=category.id) }}" style="color: #ffffff; text-decoration: none;">
-                    {{ category.name }}
-                </a>
-            </div>                                
-            {% endfor %}
+        {% for category in categories %}
+        <div class="category-card" data-category-id="{{ category.id }}" style="position: relative; background-color: {{ category.color | safe }};">
+            <!-- Shared Badge (only if shared) -->
+            {% if category.shared %}
+                <div class="shared-badge">&#x1F4E4;</div>
+            {% endif %}
+
+            <!-- Three Dots Menu for additional actions -->
+            <div class="menu-icon" onclick="toggleMenu('{{ category.id }}')">&#x22EE;</div>
+
+            <!-- Dropdown Menu for actions like Edit or Delete -->
+            <div class="menu-options" id="menu-{{ category.id }}" style="display: none;">
+                <div class="menu-item">
+                    <a href="#" onclick="openEditCategoryModal(event, '{{ category.id }}')">
+                        <span class="edit-icon">&#x270E;</span> Edit
+                    </a>
+                </div>
+                <div class="menu-item">
+                    <a href="#" onclick="deleteCategory(event, '{{ category.id }}')">
+                        <span class="delete-icon">&#x1F5D1;</span> Delete
+                    </a>
+                </div>
+            </div>
+
+            <!-- Category Card Content -->
+            <h3>{{ category.name }}</h3>
+            <p class="category-description">{{ category.description }}</p> <!-- Added category description -->
+            <p>Top 5 Tasks:</p>
+            <ul>
+                {% for task in category.tasks[:5] %}
+                    <li>{{ task.title }}</li>
+                {% endfor %}
+            </ul>
+            <p>{{ category.completed_tasks }}/{{ category.task_count }} tasks completed</p>
+            <button class="add-task-btn" data-category-id="{{ category.id }}">Add Task</button>
+            <button class="mark-all-btn" data-category-id="{{ category.id }}">Mark All as Completed</button>
+        </div>
+        {% endfor %}        
         {% endif %}
-        <!-- Button to add a new category, positioned at the center -->
-        <button id="add-category-btn" class="add-category-node">+</button>
     </div>
 </div>
 
+<!-- Button to add a new category -->
+<div class="add-category-card" onclick="document.getElementById('categoryModal').style.display='block';">
+    <h2>+</h2>
+</div>
 
-
-    <!-- Modal for creating a new category -->
-    <div id="categoryModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" id="closeModal">&times;</span>
-            <h2>Create New Category</h2>
-            <form id="categoryForm" method="POST" action="{{ url_for('main.add_category') }}">
-                <label for="categoryName">Category Name:</label>
-                <input type="text" id="categoryName" name="categoryName" required>
-                <label for="categoryColor">Category Color:</label>
-                <input type="color" id="categoryColor" name="categoryColor" value="#007bff">
-                <button type="submit" class="btn">Create Category</button>
-            </form>
-        </div>
+<!-- Modal for creating a new category -->
+<div id="categoryModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-btn" id="closeModal">&times;</span>
+        <h2>Create New Category</h2>
+        <form id="categoryForm" method="POST" action="{{ url_for('main.add_category') }}">
+            <label for="categoryName">Category Name:</label>
+            <input type="text" id="categoryName" name="categoryName" required>
+            
+            <label for="categoryColor">Category Color:</label>
+            <input type="color" id="categoryColor" name="categoryColor" value="#007bff">
+            <button type="button" id="confirmColorBtn" class="btn">Confirm Color</button>
+            
+            <label for="categoryDescription">Category Description:</label>
+            <textarea id="categoryDescription" name="categoryDescription" rows="3"></textarea>
+            
+            <button type="submit" class="btn">Create Category</button>
+        </form>
     </div>
+</div>
 
-    <!-- Display tasks grouped by selected category -->
-    <h2>Tasks for Selected Category:</h2>
-    <ul>
-        {% if tasks %}
-            {% for task in tasks %}
-                <li>
-                    <strong>{{ task.title }}</strong>: {{ task.description }}
-                    <br>
-                    <!-- Links to edit, delete, share, and view comments on tasks -->
-                    <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit</a>
-                    <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
-                        <button type="submit" class="btn btn-danger">Delete</button>
-                    </form>
-                    <a href="{{ url_for('main.share_task', task_id=task.id) }}" class="btn btn-secondary">Share Task</a>
-                    <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
-                </li>
-            {% endfor %}
-        {% else %}
-            <p>No tasks found in this category.</p>
-        {% endif %}
-    </ul>
+<!-- Modal for editing a category -->
+<div id="editCategoryModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-btn" id="closeEditModal">&times;</span>
+        <h2>Edit Category</h2>
+        <form id="editCategoryForm" onsubmit="submitEditCategory(event)">
+            <input type="hidden" id="editCategoryId" name="categoryId">
+            <label for="editCategoryName">Category Name:</label>
+            <input type="text" id="editCategoryName" name="categoryName" required>
+            
+            <label for="editCategoryDescription">Category Description:</label>
+            <textarea id="editCategoryDescription" name="categoryDescription" rows="3"></textarea>
 
-    <!-- Pending Invitations Section -->
-    <h2>Pending Invitations:</h2>
-    {% if invitations %}
-    <ul>
-        {% for invitation in invitations %}
+            <label for="editCategoryColor">Category Color:</label>
+            <input type="color" id="editCategoryColor" name="categoryColor">
+
+            <button type="submit" class="btn">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<!-- Display tasks grouped by selected category -->
+<h2>Tasks for Selected Category:</h2>
+<ul>
+    {% if tasks %}
+        {% for task in tasks %}
             <li>
-                <strong>Task: {{ invitation.task.title }}</strong> (Role: {{ invitation.role }})
+                <strong>{{ task.title }}</strong>: {{ task.description }}
                 <br>
-                <a href="{{ url_for('main.accept_invitation', invitation_id=invitation.id) }}" class="btn">Accept Invitation</a>
-                <a href="{{ url_for('main.decline_invitation', invitation_id=invitation.id) }}" class="btn btn-danger">Decline Invitation</a>
+                <!-- Links to edit, delete, share, and view comments on tasks -->
+                <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit</a>
+                <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+                <a href="{{ url_for('main.share_task', task_id=task.id) }}" class="btn btn-secondary">Share Task</a>
+                <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
             </li>
         {% endfor %}
-    </ul>
     {% else %}
-        <p>You have no pending invitations.</p>
+        <p>No tasks found in this category.</p>
     {% endif %}
+</ul>
 
-    <!-- Links -->
-    <a href="{{ url_for('main.add_task') }}" class="btn">Add New Task</a><br><br>
-    <a href="{{ url_for('main.logout') }}" class="btn btn-secondary">Logout</a>
+<!-- Links -->
+<a href="{{ url_for('main.add_task') }}" class="btn">Add New Task</a><br><br>
+<a href="{{ url_for('main.logout') }}" class="btn btn-secondary">Logout</a>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            setTimeout(() => {
-                const circularContainer = document.querySelector(".circular-container");
-                const nodes = document.querySelectorAll(".category-node");
-                const addButton = document.getElementById("add-category-btn");
-    
-                if (!circularContainer || !addButton) {
-                    return; // Exit if elements aren't found
-                }
-    
-                // Define radius and center position
-                const radius = circularContainer.offsetWidth / 2 - 80; // Adjust radius if needed
-                const centerX = circularContainer.offsetWidth / 2;
-                const centerY = circularContainer.offsetHeight / 2;
-    
-                // Position nodes in a circular layout
-                if (nodes.length > 0) {
-                    const angleStep = (2 * Math.PI) / nodes.length;
-    
-                    nodes.forEach((node, index) => {
-                        const angle = index * angleStep;
-                        const x = centerX + radius * Math.cos(angle) - node.offsetWidth / 2;
-                        const y = centerY + radius * Math.sin(angle) - node.offsetHeight / 2;
-    
-                        node.style.position = "absolute";
-                        node.style.left = `${x}px`;
-                        node.style.top = `${y}px`;
-                    });
-                }
-    
-                // Position the add button in the center
-                addButton.style.position = "absolute";
-                addButton.style.left = `${centerX - addButton.offsetWidth / 2}px`;
-                addButton.style.top = `${centerY - addButton.offsetHeight / 2}px`;
-                addButton.style.zIndex = 20; // Ensure the add button is above category nodes
-    
-                // Add event listener to the add button for category addition
-                addButton.addEventListener('click', function (event) {
-                    event.preventDefault(); // Prevent any default behavior, like form submission
-                    // Here you can open a modal or redirect to a form to add a new category
-                    window.location.href = "{{ url_for('main.categories') }}";
-                });
-            }, 100); // Add a small delay to ensure the container is fully rendered
-        });
-    </script>
-    
-    
-    
+<!-- Scripts -->
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
 </body>
-
 </html>

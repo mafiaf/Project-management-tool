@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ category.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <h1>{{ category.name }}</h1>
+    <p>{{ category.description }}</p>
+
+    <h2>Tasks:</h2>
+    <ul>
+        {% if tasks %}
+            {% for task in tasks %}
+                <li>
+                    <strong>{{ task.title }}</strong>: {{ task.description }}
+                    <br>
+                    <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit</a>
+                    <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </li>
+            {% endfor %}
+        {% else %}
+            <p>No tasks found in this category.</p>
+        {% endif %}
+    </ul>
+
+    <!-- Add link to go back to the dashboard -->
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+</body>
+
+</html>

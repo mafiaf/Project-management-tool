@@ -20,24 +20,24 @@
         {% endif %}
     {% endwith %}
 
-    <!-- Edit Category form -->
-    <form method="POST" action="">
-        {{ form.hidden_tag() }}
-        <p>
-            {{ form.name.label }}<br>
-            {{ form.name(size=32) }}
-        </p>
-        <p>
-            {{ form.description.label }}<br>
-            {{ form.description(rows=4) }}
-        </p>
-        <p>
-            {{ form.color.label }}<br>
-            {{ form.color() }}
-        </p>
-        <p>{{ form.submit() }}</p>
-    </form>
-    
+<!-- Edit Category form -->
+<form id="editCategoryForm" method="POST" action="">
+    {{ form.hidden_tag() }}
+    <input type="hidden" id="editCategoryId" name="categoryId">
+    <p>
+        {{ form.name.label }}<br>
+        <input type="text" id="editCategoryName" name="categoryName" size="32">
+    </p>
+    <p>
+        {{ form.description.label }}<br>
+        <textarea id="editCategoryDescription" name="categoryDescription" rows="4">{{ form.description.data }}</textarea>
+    </p>
+    <p>
+        {{ form.color.label }}<br>
+        <input type="color" id="editCategoryColor" name="categoryColor">
+    </p>
+    <p><button type="submit" class="btn">Save Changes</button></p>
+</form>
 
     <a href="{{ url_for('main.categories') }}">Back to Categories</a>
 </body>

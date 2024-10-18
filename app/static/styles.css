@@ -1,120 +1,191 @@
 :root {
     --primary-color: #007bff;
     --secondary-color: #28a745;
-    --node-size: 100px;
-    --add-btn-size: 60px;
+    --card-width: 200px;
+    --card-height: 150px;
+    --card-padding: 15px;
+    --card-margin: 20px;
+    --header-font-size: 1.2em;
+    --task-list-font-size: 0.9em;
+    --tasks-done-font-size: 1em;
+    --icon-btn-size: 30px;
 }
 
-.circular-container {
-    position: relative; 
-    width: 500px; 
-    height: 500px; 
-    margin: 0 auto; 
-    border: 2px dashed #ccc; /* Change border color to red to clearly see it */
-    border-radius: 50%;
+/* icons */
+.top-right-icons {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 20px;
+    z-index: 100;
 }
 
-.category-node {
-    width: var(--node-size); 
-    height: var(--node-size);
-    border-radius: 50%;
+/* Grid container for categories */
+.grid-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--card-margin);
+    justify-content: space-around;
+    padding: 20px;
+}
+
+.category-card {
+    width: 300px; /* Increased width */
+    height: 400px; /* Increased height to fit more content */
     background-color: var(--primary-color);
     color: #ffffff;
-    text-align: center;
-    line-height: var(--node-size); /* Ensure the text is vertically centered */
-    position: absolute;
-    cursor: pointer;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    padding: var(--card-padding);
     display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 5;
-    font-size: 1em; 
+    flex-direction: column;
+    justify-content: space-between;
     transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.category-node:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+.grid-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px; /* Increased gap for better spacing */
+    justify-content: space-around;
+    padding: 20px;
 }
 
-.add-category-node {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-color: green;
-    color: white;
-    border: 2px solid black; /* Border to visualize the button position */
+.category-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+
+.category-card h3 {
+    font-size: var(--header-font-size);
+    margin: 0 0 10px;
+}
+
+.category-card ul {
+    padding-left: 15px;
+    font-size: var(--task-list-font-size);
+    margin: 0 0 10px;
+}
+
+.category-card p {
+    font-size: var(--tasks-done-font-size);
+    margin: 5px 0;
+}
+
+.add-task-btn,
+.mark-all-btn {
+    padding: 5px;
+    margin: 5px;
+    font-size: 0.8em;
+    color: #ffffff;
+    background-color: var(--secondary-color);
+    border: none;
+    border-radius: 4px;
     cursor: pointer;
-    font-size: 1.5em;
-    position: absolute;  
-    top: calc(50% - 30px); /* Adjusted calculation for more precision */
-    left: calc(50% - 30px); /* Adjusted calculation for more precision */
-    transform: translate(0, 0); /* Removing this to make centering more predictable */
-    z-index: 20;  
+    transition: background-color 0.3s;
+}
+
+.add-task-btn:hover,
+.mark-all-btn:hover {
+    background-color: #218838;
+}
+
+.add-category-card {
+    width: var(--card-width);
+    height: var(--card-height);
+    background-color: #e0e0e0;
+    color: #333;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.add-category-node:hover {
-    background-color: darkgreen; /* Change color on hover, but keep the button size */
+.add-category-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+
+.add-category-card h2 {
+    font-size: 2.5em;
+    margin: 0;
 }
 
 .no-categories-message {
     text-align: center;
-    color: #ff0000; /* Adjust the color to make it more visible */
+    color: #ff0000;
     font-weight: bold;
-    margin-bottom: 15px; /* Add some spacing between the message and the container */
-}
-
-
-/*smaller screens */
-@media screen and (max-width: 768px) {
-    .circular-container {
-        width: 300px;  
-        height: 300px; 
-
-    .category-node {
-        width: 70px;   
-        height: 70px;
-        font-size: 0.8em;  
-        line-height: 70px; 
-    }
-
-    .add-category-node {
-        width: 50px;   
-        height: 50px;
-        font-size: 1.2em;  
-    }
-     }
+    margin-bottom: 15px;
 }
 
 /* Modal container - hidden by default */
 .modal {
     display: none;  /* Hidden by default */
     position: fixed;  /* Stay in place */
-    z-index: 50;  /* Sit on top of other elements */
+    z-index: 1000;  /* Ensure it stays on top */
     left: 0;
     top: 0;
-    width: 100%;  /* Full width */
-    height: 100%;  /* Full height */
+    width: 100%;
+    height: 100%;
     overflow: auto;  /* Enable scroll if needed */
-    background-color: rgba(0, 0, 0, 0.4);  /* Black background with opacity */
+    background-color: rgba(0, 0, 0, 0.5);  /* Black background with opacity */
 }
 
-/* Modal content */
 .modal-content {
     background-color: #fefefe;
-    margin: 15% auto;  /* 15% from the top and centered */
+    margin: 10% auto;  /* 10% from the top and centered */
     padding: 20px;
     border: 1px solid #888;
-    width: 80%;  /* Could be more or less, depending on screen size */
+    width: 80%;
     max-width: 400px;
     border-radius: 8px;
-    text-align: center;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
-/* Close button (×) */
+
+.modal-content label {
+    font-weight: bold;
+    margin-bottom: 5px; /* Space between label and input field */
+}
+
+.modal-content input[type="text"],
+.modal-content input[type="color"],
+.modal-content textarea,
+.modal-content button {
+    width: calc(100% - 20px);
+    padding: 10px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+    box-sizing: border-box;
+}
+
+.confirm-color-btn {
+    display: none; /* Hidden by default */
+    padding: 10px;
+    margin-top: 10px;
+    font-size: 1em;
+    color: #ffffff;
+    background-color: var(--secondary-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.confirm-color-btn:hover {
+    background-color: #218838;
+}
+
+
 .close-btn {
     color: #aaa;
     float: right;
@@ -129,3 +200,71 @@
     text-decoration: none;
     cursor: pointer;
 }
+
+/* Responsive design for smaller screens */
+@media screen and (max-width: 768px) {
+    .grid-container {
+        gap: 10px;
+    }
+
+    .category-card,
+    .add-category-card {
+        width: calc(100% - 40px);
+        margin: 0 auto;
+    }
+} 
+
+
+        /* Shared Badge */
+        .shared-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: green;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+        }
+
+        /* Three Dots Menu Icon */
+        .menu-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+        }
+
+        /* Dropdown Menu for Additional Actions */
+        .menu-options {
+            position: absolute;
+            top: 30px;
+            right: 10px;
+            background: white;
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+            display: none;
+        }
+
+        .menu-item {
+            margin: 5px 0;
+        }
+
+        .menu-item a {
+            text-decoration: none;
+            color: black;
+        }
+
+        .edit-icon {
+            color: blue;
+        }
+
+        .delete-icon {
+            color: red;
+        }
