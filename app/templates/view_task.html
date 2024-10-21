@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Task</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>{{ task.title }}</h1>
+    <p><strong>Description:</strong> {{ task.description }}</p>
+    <p><strong>Category:</strong> {{ task.category.name if task.category else 'Uncategorized' }}</p>
+    <p><strong>Assigned Users:</strong></p>
+    <ul>
+        {% for user in task.users %}
+            <li>{{ user.username }} (Role: {{ user.role }})</li>
+        {% endfor %}
+    </ul>
+    <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit Task</a>
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+</body>
+</html>

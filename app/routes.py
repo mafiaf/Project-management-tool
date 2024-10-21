@@ -344,6 +344,21 @@ def decline_invitation(invitation_id):
     flash('Invitation declined.', 'info')
     return redirect(url_for('main.view_invitations'))
 
+@main.route('/task/<int:task_id>', methods=['GET'])
+@login_required
+def view_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    user_id = session.get('user_id')
+
+    # Check if the user has permission to view the task
+    task_user_entry = db.session.query(task_user).filter_by(task_id=task.id, user_id=user_id).first()
+    if not task_user_entry:
+        flash('You do not have permission to view this task.', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    return render_template('view_task.html', task=task)
+
+
 
 @main.route('/task/<int:task_id>/comments', methods=['GET', 'POST'])
 @login_required
