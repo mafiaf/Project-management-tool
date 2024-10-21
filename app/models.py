@@ -84,7 +84,8 @@ class Task(db.Model):
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)  # Add Foreign Key to Category
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)
+    completed = db.Column(db.Boolean, default=False)
 
     # Relationship to Category
     category = relationship('Category', back_populates='tasks')

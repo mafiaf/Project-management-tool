@@ -66,7 +66,7 @@
                     <li>{{ task.title }}</li>
                 {% endfor %}
             </ul>
-            <p>{{ category.completed_tasks }}/{{ category.task_count }} tasks completed</p>
+            <p>Tasks Completed: {{ category.completed_tasks }} / {{ category.task_count }}</p> <!-- Task Count Summary -->
             <button class="add-task-btn" data-category-id="{{ category.id }}">Add Task</button>
             <button class="mark-all-btn" data-category-id="{{ category.id }}">Mark All as Completed</button>
         </div>

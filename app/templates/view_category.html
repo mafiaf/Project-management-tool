@@ -16,12 +16,20 @@
     <div class="tasks-grid">
         {% if tasks %}
             {% for task in tasks %}
-                <div class="task-card">
-                    <h3>{{ task.title }}</h3>
+                <div class="task-card {% if task.completed %}task-completed{% endif %}">
+                    <h3>
+                        {{ task.title }}
+                        {% if task.completed %}
+                            <span class="completed-icon">&#x2714;</span> <!-- Green checkmark emoji -->
+                        {% endif %}
+                    </h3>
                     <p>{{ task.description }}</p>
-
+    
                     <!-- Links to edit, delete, share, and view comments on tasks -->
                     <div class="task-actions">
+                        {% if not task.completed %}
+                            <button onclick="markTaskAsDone('{{ task.id }}')" class="btn btn-success">Mark as Done</button>
+                        {% endif %}
                         <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn btn-secondary">Edit Task</a>
                         <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
                             <button type="submit" class="btn btn-danger">Delete</button>
@@ -35,10 +43,13 @@
             <p>No tasks found in this category.</p>
         {% endif %}
     </div>
+    
 
     <!-- Add link to go back to the dashboard -->
     <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
 
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='category.js') }}"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 

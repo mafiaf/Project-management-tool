@@ -71,9 +71,19 @@ def dashboard():
     # Get all categories owned by the logged-in user
     categories = Category.query.filter_by(user_id=user_id).all()
 
+    # Calculate task statistics for each category
+    for category in categories:
+        # Count the total number of tasks and completed tasks within this category
+        total_tasks = Task.query.filter_by(category_id=category.id).count()
+        completed_tasks = Task.query.filter_by(category_id=category.id, completed=True).count()
+        
+        # Assign these calculated values to the category object
+        category.task_count = total_tasks
+        category.completed_tasks = completed_tasks
+
     # Get all tasks owned by the user
     owned_tasks_query = Task.query.filter(Task.user_id == user_id)
-    
+
     # Get tasks shared with the user (excluding owned tasks), along with the role
     shared_tasks_query = (
         db.session.query(Task, task_user.c.role)
@@ -344,6 +354,28 @@ def decline_invitation(invitation_id):
     flash('Invitation declined.', 'info')
     return redirect(url_for('main.view_invitations'))
 
+@main.route('/task/<int:task_id>/mark_done', methods=['POST'])
+@login_required
+def mark_task_done(task_id):
+    task = Task.query.get_or_404(task_id)
+    user_id = session.get('user_id')
+
+    # Check if the user is either the owner or has edit rights to mark the task as done
+    task_user_entry = db.session.query(task_user).filter_by(task_id=task.id, user_id=user_id).first()
+
+    # Update permission check to allow the task owner or Editor/Admin role
+    if task.user_id != user_id and (not task_user_entry or task_user_entry.role not in ['Editor', 'Admin']):
+        flash("You don't have permission to mark this task as done.", 'danger')
+        return redirect(url_for('main.view_task', task_id=task_id))
+
+    # Mark the task as completed
+    task.completed = True
+    db.session.commit()
+
+    flash('Task marked as completed!', 'success')
+    return redirect(url_for('main.view_task', task_id=task_id))
+
+
 @main.route('/task/<int:task_id>', methods=['GET'])
 @login_required
 def view_task(task_id):
@@ -357,8 +389,6 @@ def view_task(task_id):
         return redirect(url_for('main.dashboard'))
 
     return render_template('view_task.html', task=task)
-
-
 
 @main.route('/task/<int:task_id>/comments', methods=['GET', 'POST'])
 @login_required
