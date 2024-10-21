@@ -16,6 +16,7 @@
             <li>{{ user.username }} (Role: {{ user.role }})</li>
         {% endfor %}
     </ul>
+    <a href="{{ url_for('main.manage_task_users', task_id=task.id) }}" class="btn btn-secondary">Manage Users</a>
     <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit Task</a>
     <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
 </body>

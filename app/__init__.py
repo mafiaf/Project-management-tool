@@ -1,14 +1,16 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate  # Import Flask-Migrate
-from config import Config  # Import the Config class
+from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
+from config import Config
 
 db = SQLAlchemy()
-migrate = Migrate()  # Create an instance of Migrate
+migrate = Migrate()
+csrf = CSRFProtect()  # Create an instance of CSRFProtect
 
 def create_app():
     app = Flask(__name__)
-    
+
     # Configuration
     app.config.from_object(Config)
 
@@ -16,7 +18,10 @@ def create_app():
     db.init_app(app)
 
     # Initialize Flask-Migrate
-    migrate.init_app(app, db)  # Bind app and db to Flask-Migrate
+    migrate.init_app(app, db)
+
+    # Initialize CSRF protection
+    csrf.init_app(app)  # Bind the app to CSRF protection
 
     # Register routes
     from .routes import main

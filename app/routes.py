@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, redirect, jsonify
 from .models import User, Task, db, TaskInvitation, task_user, Category, ActivityLog, Comment   #Model imports
-from .forms import RegistrationForm, LoginForm, TaskForm, ShareTaskForm, CommentForm, CategoryForm    # Import the forms
+from .forms import RegistrationForm, LoginForm, TaskForm, ShareTaskForm, CommentForm, CategoryForm, CancelInvitationForm    # Import the forms
 from app.utils import login_required, role_required
 import logging  # Import logging for debugging
 
@@ -260,6 +260,12 @@ def delete_task(task_id):
 
 from sqlalchemy import and_
 
+import logging
+
+# Configure logging for debugging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 @main.route('/share_task/<int:task_id>', methods=['GET', 'POST'])
 @login_required
 def share_task(task_id):
@@ -279,14 +285,19 @@ def share_task(task_id):
 
     if result is None:
         flash('Only the owner can share this task.', 'danger')
+        logger.warning("User %s attempted to share task %d, but is not the owner.", user_id, task_id)
         return redirect(url_for('main.dashboard'))
 
     form = ShareTaskForm()
+
     if form.validate_on_submit():
+        logger.info("Form validated for sharing task.")
+
         # Find the user to share the task with
         invitee = User.query.filter_by(email=form.email.data).first()
         if invitee is None:
             flash('User with that email does not exist.', 'danger')
+            logger.warning("User with email %s does not exist.", form.email.data)
             return redirect(url_for('main.share_task', task_id=task.id))
 
         # Create a new task invitation
@@ -295,18 +306,75 @@ def share_task(task_id):
         db.session.commit()
 
         flash(f'Invitation sent to {invitee.email} as {form.role.data}.', 'success')
+        logger.info("Invitation sent to %s for task %d with role %s.", invitee.email, task.id, form.role.data)
         return redirect(url_for('main.dashboard'))
+    
+    if form.errors:
+        logger.warning("Form validation errors: %s", form.errors)
 
-    return render_template('share_task.html', form=form, task=task)
+    # Log if form is not validated or if it's a GET request
+    logger.info("Form not submitted or not valid, displaying share task form.")
+
+    # Get all users assigned to this task
+    users_assigned = (
+        db.session.query(User, task_user.c.role)
+        .join(task_user, task_user.c.user_id == User.id)
+        .filter(task_user.c.task_id == task.id)
+        .all()
+    )
+
+    # Get all users (to potentially add to the task)
+    users = User.query.all()
+
+    return render_template(
+        'manage_task_users.html',
+        form=form,
+        task=task,
+        users_assigned=users_assigned,
+        users=users
+    )
 
 
 @main.route('/invitations', methods=['GET'])
 @login_required
 def view_invitations():
     user_id = session.get('user_id')
-    invitations = TaskInvitation.query.filter_by(invitee_id=user_id, status='Pending').all()
 
-    return render_template('invitations.html', invitations=invitations)
+    # Invitations received by the logged-in user
+    invitations_received = TaskInvitation.query.filter_by(invitee_id=user_id, status='Pending').all()
+
+    # Invitations sent by the logged-in user
+    invitations_sent = TaskInvitation.query.filter_by(inviter_id=user_id, status='Pending').all()
+
+    # Create an instance of the form
+    form = CancelInvitationForm()
+
+    return render_template('invitations.html', invitations_received=invitations_received, invitations_sent=invitations_sent, form=form)
+
+
+@main.route('/invitation/<int:invitation_id>/cancel', methods=['POST'])
+@login_required
+def cancel_invitation(invitation_id):
+    invitation = TaskInvitation.query.get_or_404(invitation_id)
+    user_id = session.get('user_id')
+
+    # Ensure the logged-in user is the inviter
+    if invitation.inviter_id != user_id:
+        flash('You do not have permission to cancel this invitation.', 'danger')
+        return redirect(url_for('main.view_invitations'))
+
+    try:
+        # Delete the invitation if it's pending
+        db.session.delete(invitation)
+        db.session.commit()
+        flash('Invitation canceled successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('An error occurred while canceling the invitation.', 'danger')
+        print(f"Error occurred while canceling invitation: {e}")
+
+    return redirect(url_for('main.view_invitations'))
+
 
 @main.route('/invitation/<int:invitation_id>/accept', methods=['POST'])
 @login_required
@@ -374,6 +442,83 @@ def mark_task_done(task_id):
 
     flash('Task marked as completed!', 'success')
     return redirect(url_for('main.view_task', task_id=task_id))
+
+@main.route('/task/<int:task_id>/manage_users', methods=['GET', 'POST'])
+@login_required
+def manage_task_users(task_id):
+    task = Task.query.get_or_404(task_id)
+    user_id = session.get('user_id')
+
+    # Ensure that the user has permission to manage the task
+    task_user_entry = db.session.query(task_user).filter_by(task_id=task.id, user_id=user_id).first()
+    if not task_user_entry or task_user_entry.role not in ['Owner', 'Admin']:
+        flash("You do not have permission to manage users for this task.", 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    form = ShareTaskForm()
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        selected_user_id = request.form.get('user_id')
+
+        if action == 'remove':
+            # Remove user from task
+            db.session.query(task_user).filter_by(task_id=task.id, user_id=selected_user_id).delete()
+            db.session.commit()
+            flash('User removed from the task successfully.', 'success')
+
+        elif action == 'update_role':
+            # Update user's role in the task
+            new_role = request.form.get('role')
+            stmt = task_user.update().where(
+                (task_user.c.task_id == task.id) & (task_user.c.user_id == selected_user_id)
+            ).values(role=new_role)
+            db.session.execute(stmt)
+            db.session.commit()
+            flash('User role updated successfully.', 'success')
+
+        elif action == 'add' and form.validate_on_submit():
+            # Add new user to the task
+            new_user_id = request.form.get('user_id')
+            new_role = request.form.get('role')
+
+            existing_entry = db.session.query(task_user).filter_by(task_id=task.id, user_id=new_user_id).first()
+            if existing_entry:
+                flash('This user is already assigned to the task.', 'warning')
+            else:
+                stmt = task_user.insert().values(task_id=task.id, user_id=new_user_id, role=new_role)
+                db.session.execute(stmt)
+                db.session.commit()
+                flash('User added to the task successfully.', 'success')
+
+    # Get all users assigned to this task
+    users_assigned = (
+        db.session.query(User, task_user.c.role)
+        .join(task_user, task_user.c.user_id == User.id)
+        .filter(task_user.c.task_id == task.id)
+        .all()
+    )
+
+    # Get all users (to potentially add to the task)
+    users = User.query.all()
+
+    return render_template(
+        'manage_task_users.html',
+        task=task,
+        users_assigned=users_assigned,
+        users=users,
+        form=form
+    )
+
+    # Get all users (to potentially add to the task)
+    users = User.query.all()
+
+    return render_template(
+        'manage_task_users.html',
+        task=task,
+        users_assigned=users_assigned,
+        users=users
+    )
 
 
 @main.route('/task/<int:task_id>', methods=['GET'])

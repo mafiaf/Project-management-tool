@@ -39,3 +39,5 @@ class CategoryForm(FlaskForm):
     color = ColorField('Color', default='#007bff')
     submit = SubmitField('Save Category')
 
+class CancelInvitationForm(FlaskForm):
+    pass

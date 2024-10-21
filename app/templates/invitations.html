@@ -9,8 +9,10 @@
 <body>
     <h1>Pending Invitations</h1>
 
-    {% if invitations %}
-        {% for invitation in invitations %}
+    <!-- Invitations Received -->
+    <h2>Invitations Received</h2>
+    {% if invitations_received %}
+        {% for invitation in invitations_received %}
             <div class="invitation-card">
                 <p>Task: <strong>{{ invitation.task.title }}</strong> (Role: {{ invitation.role }})</p>
                 <form action="{{ url_for('main.accept_invitation', invitation_id=invitation.id) }}" method="POST" style="display: inline;">
@@ -24,6 +26,24 @@
     {% else %}
         <p>You have no pending invitations.</p>
     {% endif %}
-    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard    
+
+<!-- Invitations Sent -->
+<h2>Invitations Sent</h2>
+{% if invitations_sent %}
+    {% for invitation in invitations_sent %}
+        <div class="invitation-card">
+            <p>Task: <strong>{{ invitation.task.title }}</strong> (Role: {{ invitation.role }})</p>
+            <p>Status: Pending</p>
+            <form action="{{ url_for('main.cancel_invitation', invitation_id=invitation.id) }}" method="POST" style="display: inline;">
+                {{ form.hidden_tag() }}  <!-- Include CSRF Token -->
+                <button type="submit" class="btn btn-danger">Cancel Invitation</button>
+            </form>                
+        </div>
+    {% endfor %}
+{% else %}
+    <p>You have no pending invitations sent.</p>
+{% endif %}
+
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
 </body>
 </html>

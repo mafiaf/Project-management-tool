@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Task Users and Share Task</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <!-- Flash Messages Section -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flashes">
+          {% for category, message in messages %}
+            <li class="flash {{ category }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <h1>Manage Users for Task: {{ task.title }}</h1>
+
+    <!-- Current Users Section -->
+    <h2>Current Users</h2>
+    <table>
+        <tr>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Actions</th>
+        </tr>
+        {% for user, role in users_assigned %}
+        <tr>
+            <td>{{ user.username }}</td>
+            <td>{{ role }}</td>
+            <td>
+                <form method="POST" style="display:inline;">
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    <select name="role">
+                        <option value="Owner" {% if role == 'Owner' %}selected{% endif %}>Owner</option>
+                        <option value="Editor" {% if role == 'Editor' %}selected{% endif %}>Editor</option>
+                        <option value="Viewer" {% if role == 'Viewer' %}selected{% endif %}>Viewer</option>
+                    </select>
+                    <button type="submit" name="action" value="update_role" class="btn btn-secondary">Update Role</button>
+                </form>
+                <form method="POST" style="display:inline;">
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    <button type="submit" name="action" value="remove" class="btn btn-danger">Remove User</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h1>Share Task: {{ task.title }}</h1>
+    
+    <form method="POST" action="{{ url_for('main.share_task', task_id=task.id) }}">
+        {{ form.hidden_tag() }}
+        <p>
+            {{ form.email.label }}<br>
+            {{ form.email(size=32) }}
+        </p>
+        <p>
+            {{ form.role.label }}<br>
+            {{ form.role() }}
+        </p>
+        <p>{{ form.submit() }}</p>
+    </form>    
+
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+</body>
+
+</html>
