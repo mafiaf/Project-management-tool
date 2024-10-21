@@ -125,8 +125,9 @@
 <!-- Display tasks grouped by selected category -->
 <h2>Tasks for Selected Category:</h2>
 <ul>
-    {% if tasks %}
-        {% for task in tasks %}
+    {% if owned_tasks %}
+        <h3>Owned Tasks:</h3>
+        {% for task in owned_tasks %}
             <li>
                 <strong>{{ task.title }}</strong>: {{ task.description }}
                 <br>
@@ -140,7 +141,53 @@
             </li>
         {% endfor %}
     {% else %}
-        <p>No tasks found in this category.</p>
+        <p>No owned tasks found in this category.</p>
+    {% endif %}
+</ul>
+
+<!-- Display shared tasks -->
+<h2>Shared Tasks:</h2>
+<ul>
+    {% if shared_tasks %}
+        {% for task, role in shared_tasks %}
+            <li>
+                <strong>{{ task.title }}</strong>: {{ task.description }} (Role: {{ role }})
+                <br>
+                <!-- Links to view and interact with shared tasks (editor/viewer may have limited actions) -->
+                <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
+                
+                <!-- Only show edit button if the user's role is Editor or Admin -->
+                {% if role in ['Editor', 'Admin'] %}
+                    <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn btn-secondary">Edit Task</a>
+                {% endif %}
+            </li>
+        {% endfor %}
+    {% else %}
+        <p>No shared tasks found.</p>
+    {% endif %}
+</ul>
+
+
+
+<!-- Display uncategorized tasks -->
+<h2>Uncategorized Tasks:</h2>
+<ul>
+    {% if uncategorized_tasks %}
+        {% for task in uncategorized_tasks %}
+            <li>
+                <strong>{{ task.title }}</strong>: {{ task.description }}
+                <br>
+                <!-- Links to edit, delete, share, and view comments on tasks -->
+                <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit</a>
+                <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+                <a href="{{ url_for('main.share_task', task_id=task.id) }}" class="btn btn-secondary">Share Task</a>
+                <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
+            </li>
+        {% endfor %}
+    {% else %}
+        <p>No uncategorized tasks found.</p>
     {% endif %}
 </ul>
 

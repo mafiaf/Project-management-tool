@@ -4,35 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pending Invitations</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <h1>Pending Invitations</h1>
-    {% for invitation in invitations %}
-        <div>
-            <p>Task: {{ invitation.task.title }} (Role: {{ invitation.role }})</p>
-            <form action="{{ url_for('main.accept_invitation', invitation_id=invitation.id) }}" method="POST">
-                <button type="submit">Accept</button>
-            </form>
-            <form action="{{ url_for('main.decline_invitation', invitation_id=invitation.id) }}" method="POST">
-                <button type="submit">Decline</button>
-            </form>
-        </div>
-    {% endfor %}
 
-        <!-- Pending Invitations Section -->
-        {% if invitations %}
-        <ul>
-            {% for invitation in invitations %}
-                <li>
-                    <strong>Task: {{ invitation.task.title }}</strong> (Role: {{ invitation.role }})
-                    <br>
-                    <a href="{{ url_for('main.accept_invitation', invitation_id=invitation.id) }}" class="btn">Accept Invitation</a>
-                    <a href="{{ url_for('main.decline_invitation', invitation_id=invitation.id) }}" class="btn btn-danger">Decline Invitation</a>
-                </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-            <p>You have no pending invitations.</p>
-        {% endif %}
+    {% if invitations %}
+        {% for invitation in invitations %}
+            <div class="invitation-card">
+                <p>Task: <strong>{{ invitation.task.title }}</strong> (Role: {{ invitation.role }})</p>
+                <form action="{{ url_for('main.accept_invitation', invitation_id=invitation.id) }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-success">Accept</button>
+                </form>
+                <form action="{{ url_for('main.decline_invitation', invitation_id=invitation.id) }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Decline</button>
+                </form>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>You have no pending invitations.</p>
+    {% endif %}
 </body>
 </html>

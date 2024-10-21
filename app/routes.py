@@ -1,9 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, redirect, jsonify
 from .models import User, Task, db, TaskInvitation, task_user, Category, ActivityLog, Comment   #Model imports
 from .forms import RegistrationForm, LoginForm, TaskForm, ShareTaskForm, CommentForm, CategoryForm    # Import the forms
-from .utils import login_required  # Import the login_required decorator
+from app.utils import login_required, role_required
 import logging  # Import logging for debugging
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -72,16 +71,36 @@ def dashboard():
     # Get all categories owned by the logged-in user
     categories = Category.query.filter_by(user_id=user_id).all()
 
-    # Filter tasks based on selected category if provided, otherwise get all tasks
+    # Get all tasks owned by the user
+    owned_tasks_query = Task.query.filter(Task.user_id == user_id)
+    
+    # Get tasks shared with the user (excluding owned tasks), along with the role
+    shared_tasks_query = (
+        db.session.query(Task, task_user.c.role)
+        .join(task_user, task_user.c.task_id == Task.id)
+        .filter(task_user.c.user_id == user_id, Task.user_id != user_id)
+    )
+
     if selected_category is not None:
-        tasks = Task.query.filter_by(user_id=user_id, category_id=selected_category).all()
-    else:
-        tasks = []
+        # Filter owned and shared tasks by selected category if provided
+        owned_tasks_query = owned_tasks_query.filter_by(category_id=selected_category)
+        shared_tasks_query = shared_tasks_query.filter(Task.category_id == selected_category)
+
+    # Combine owned and shared tasks
+    owned_tasks = owned_tasks_query.all()
+    shared_tasks = shared_tasks_query.all()
 
     # Get pending invitations for the logged-in user
     invitations = TaskInvitation.query.filter_by(invitee_id=user_id, status='Pending').all()
 
-    return render_template('dashboard.html', categories=categories, tasks=tasks, invitations=invitations, selected_category=selected_category)
+    return render_template(
+        'dashboard.html',
+        categories=categories,
+        owned_tasks=owned_tasks,
+        shared_tasks=shared_tasks,
+        invitations=invitations,
+        selected_category=selected_category
+    )
 
 
 @main.route('/logout')
@@ -148,8 +167,12 @@ def add_task():
             flash(f'An error occurred while adding the task: {str(e)}', 'danger')
             logger.error(f"Error occurred: {e}")
 
-    return render_template('add_task.html', form=form, title="Add New Task", heading="Add New Task", submit_label="Add Task")
+    # If form is not valid, print errors for debugging
+    if form.errors:
+        logger.error(f"Form validation errors: {form.errors}")
+        flash(f"Form validation errors: {form.errors}", "danger")
 
+    return render_template('add_task.html', form=form, title="Add New Task", heading="Add New Task", submit_label="Add Task")
 
 
 @main.route('/edit_task/<int:task_id>', methods=['GET', 'POST'])
@@ -159,7 +182,8 @@ def edit_task(task_id):
     user_id = session.get('user_id')
 
     # Ensure user has permission to edit
-    if user_id != task.user_id:
+    role_query = db.session.query(task_user.c.role).filter(task_user.c.task_id == task.id, task_user.c.user_id == user_id).first()
+    if user_id != task.user_id and (role_query is None or role_query[0] not in ['Editor', 'Admin']):
         flash('You do not have permission to edit this task.', 'danger')
         return redirect(url_for('main.dashboard'))
 
@@ -197,12 +221,19 @@ def edit_task(task_id):
         flash('Task updated successfully!', 'success')
         return redirect(url_for('main.dashboard'))
 
-    return render_template('edit_task.html', form=form, title="Edit Task", heading="Edit Task", submit_label="Save Changes")
+    # If the form is not valid, add a flash message with form errors
+    if form.errors:
+        flash('There were errors in the form. Please correct them.', 'danger')
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"Error in {field}: {error}", 'danger')
 
+    return render_template('edit_task.html', form=form, task=task, title="Edit Task", heading="Edit Task", submit_label="Save Changes")
 
 
 @main.route('/delete_task/<int:task_id>', methods=['POST'])
 @login_required
+@role_required('Admin', 'Owner')
 def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
 
@@ -273,27 +304,28 @@ def accept_invitation(invitation_id):
     invitation = TaskInvitation.query.get_or_404(invitation_id)
 
     # Ensure the logged-in user is the invited person
-    if invitation.invitee_id != session.get('user_id'):
+    user_id = session.get('user_id')
+    if invitation.invitee_id != user_id:
         flash('You do not have permission to perform this action.', 'danger')
         return redirect(url_for('main.view_invitations'))
 
-    # Add user to task and set status to accepted
-    task = Task.query.get(invitation.task_id)
-    invitee = User.query.get(invitation.invitee_id)
-    task.users.append(invitee)
+    try:
+        # Insert the user-task association into the task_user table
+        stmt = task_user.insert().values(task_id=invitation.task_id, user_id=invitation.invitee_id, role=invitation.role)
+        db.session.execute(stmt)
 
-    # Set the role for the invited user
-    stmt = task_user.update().where(
-        (task_user.c.task_id == task.id) & (task_user.c.user_id == invitee.id)
-    ).values(role=invitation.role)
-    db.session.execute(stmt)
+        # Update invitation status to 'Accepted'
+        invitation.status = 'Accepted'
+        db.session.commit()
 
-    # Update invitation status
-    invitation.status = 'Accepted'
-    db.session.commit()
+        flash('Invitation accepted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('An error occurred while accepting the invitation.', 'danger')
+        print(f"Error occurred while accepting invitation: {e}")
 
-    flash('Invitation accepted successfully!', 'success')
     return redirect(url_for('main.dashboard'))
+
 
 @main.route('/invitation/<int:invitation_id>/decline', methods=['POST'])
 @login_required
@@ -395,14 +427,11 @@ def view_category(category_id):
 
 @main.route('/edit_category/<int:category_id>', methods=['POST'])
 @login_required
+@role_required('Admin', 'Owner')
 def edit_category(category_id):
     try:
         category = Category.query.get_or_404(category_id)
         user_id = session.get('user_id')
-
-        # Ensure the user has permission to edit the category
-        if category.user_id != user_id:
-            return jsonify({'error': 'You do not have permission to edit this category.'}), 403
 
         # Get data from JSON request
         data = request.get_json()
@@ -453,32 +482,40 @@ def edit_category(category_id):
         return jsonify({'error': 'An error occurred while updating the category.'}), 500
 
 
-
-
 @main.route('/delete_category/<int:category_id>', methods=['POST'])
 @login_required
 def delete_category(category_id):
-    category = Category.query.get_or_404(category_id)
-    user_id = session.get('user_id')
+    try:
+        category = Category.query.get_or_404(category_id)
+        user_id = session.get('user_id')
 
-    if category.user_id != user_id:
-        flash('You do not have permission to delete this category.', 'danger')
-        return redirect(url_for('main.categories'))
+        # Ensure the user has permission to delete the category
+        if category.user_id != user_id:
+            return jsonify({'error': 'You do not have permission to delete this category.'}), 403
 
-    db.session.delete(category)
-    db.session.commit()
+        # Delete the category
+        db.session.delete(category)
+        db.session.commit()
 
-    # Log activity for deleting a category
-    activity = ActivityLog(
-        description=f"Category '{category.name}' deleted by user {user_id}",
-        user_id=user_id,
-        task_id=None
-    )
-    db.session.add(activity)
-    db.session.commit()
+        # Log activity for deleting a category
+        activity = ActivityLog(
+            description=f"Category '{category.name}' deleted by user {user_id}",
+            user_id=user_id,
+            category_id=category.id
+        )
+        db.session.add(activity)
+        db.session.commit()
 
-    flash('Category deleted successfully!', 'success')
-    return redirect(url_for('main.categories'))
+        return jsonify({'success': 'Category deleted successfully.'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error occurred while deleting category: {e}")
+        return jsonify({'error': 'An error occurred while deleting the category.'}), 500
+
+
+
+
 
 @main.route('/add_category', methods=['POST'])
 @login_required
@@ -486,11 +523,19 @@ def add_category():
     user_id = session.get('user_id')
     category_name = request.form.get('categoryName')
     category_color = request.form.get('categoryColor', '#007bff') 
+    category_description = request.form.get('categoryDescription', '')
 
     if category_name:
-        new_category = Category(name=category_name, color=category_color, user_id=user_id)
+        # Create the new category and assign the user as the owner
+        new_category = Category(
+            name=category_name,
+            color=category_color,
+            description=category_description,
+            user_id=user_id
+        )
         db.session.add(new_category)
         db.session.commit()
+
         flash(f"Category '{category_name}' has been successfully created.", "success")
     else:
         flash("Category name is required.", "error")
@@ -498,8 +543,11 @@ def add_category():
     return redirect(url_for('main.dashboard'))
 
 
+
+
 @main.route('/mark_all_completed/<int:category_id>', methods=['POST'])
 @login_required
+@role_required('Admin', 'Owner')
 def mark_all_completed(category_id):
     """Route to mark all tasks in a category as completed"""
     # Retrieve the category

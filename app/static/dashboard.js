@@ -70,47 +70,79 @@ function toggleMenu(categoryId) {
 
 function openEditCategoryModal(event, categoryId) {
     event.stopPropagation();
+    console.log("Opening Edit Modal for Category ID:", categoryId); // Debugging statement
+
     // Show the edit category modal
     document.getElementById('editCategoryModal').style.display = 'block';
 
     // Set the form's hidden input values based on the selected category
     const categoryCard = document.querySelector(`[data-category-id="${categoryId}"]`);
+    
+    if (!categoryCard) {
+        console.error("Category card not found for categoryId:", categoryId);
+        return;
+    }
+
     document.getElementById('editCategoryId').value = categoryId;
-    document.getElementById('editCategoryName').value = categoryCard.querySelector('h3').textContent.trim();
+
+    // Set category name
+    const nameElement = categoryCard.querySelector('h3');
+    if (nameElement) {
+        document.getElementById('editCategoryName').value = nameElement.textContent.trim();
+    } else {
+        console.error("Category name element not found for categoryId:", categoryId);
+    }
+
+    // Set category color
     document.getElementById('editCategoryColor').value = categoryCard.style.backgroundColor;
 
     // Set the description if available
     const descriptionElement = categoryCard.querySelector('.category-description');
     if (descriptionElement) {
         document.getElementById('editCategoryDescription').value = descriptionElement.textContent.trim();
+    } else {
+        console.warn("No description element found for categoryId:", categoryId);
     }
 
     // Set the form action URL dynamically
     const editCategoryForm = document.getElementById('editCategoryForm');
-    editCategoryForm.action = `/edit_category/${categoryId}`; // Assuming the route expects category_id as a URL parameter
+    editCategoryForm.action = `/edit_category/${categoryId}`;
 }
 
-
 function deleteCategory(event, categoryId) {
-    event.stopPropagation();
+    event.stopPropagation(); // Prevent click event from propagating to other elements
+
     if (confirm('Are you sure you want to delete this category?')) {
+        // Send a POST request with a delete flag using fetch
         fetch(`/delete_category/${categoryId}`, {
-            method: 'POST',
+            method: 'POST',  // Use POST instead of DELETE
             headers: {
                 'Content-Type': 'application/json'
-            }
-        }).then(response => {
+            },
+            body: JSON.stringify({ delete: true })  // Optional: send additional info to confirm delete
+        })
+        .then(response => {
             if (response.ok) {
-                window.location.reload(); // Refresh the page after deletion
+                return response.json();  // Parse response as JSON if successful
             } else {
-                alert('Failed to delete category.');
+                return response.text().then(text => { throw new Error(text); });
             }
-        }).catch(error => {
+        })
+        .then(data => {
+            if (data.success) {
+                window.location.reload(); // Refresh the page after successful deletion
+            } else {
+                alert(data.error || 'Failed to delete category.');
+            }
+        })
+        .catch(error => {
             console.error('Error:', error);
-            alert('Failed to delete category.');
+            alert('Failed to delete category. Please try again.');
         });
     }
 }
+
+
 
 document.addEventListener("DOMContentLoaded", function() {
     // Open modal on button click
@@ -171,7 +203,8 @@ function submitEditCategory(event) {
     fetch(`/edit_category/${categoryId}`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
         },
         body: JSON.stringify({
             categoryName: categoryName,
@@ -183,51 +216,24 @@ function submitEditCategory(event) {
         if (response.ok) {
             return response.json();
         } else {
-            throw new Error('Failed to update category.');
+            return response.text().then(text => { 
+                console.error('Error response:', text);
+                throw new Error(text); 
+            });
         }
     })
     .then(data => {
-        console.log(data.message); // Log the success message
-        // If successful, close the modal and refresh the categories on the page
-        document.getElementById('editCategoryModal').style.display = 'none';
-        window.location.reload(); // Reload to reflect changes
+        if (data.success) {
+            // Close the modal and refresh the page if successful
+            document.getElementById('editCategoryModal').style.display = 'none';
+            window.location.reload(); // Reload to reflect changes
+        } else {
+            alert(data.error || 'Failed to update category.');
+        }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Failed to update the category.');
+        alert('Failed to update category. Please try again.');
     });
 }
 
-fetch(`/edit_category/${categoryId}`, {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-    },
-    body: JSON.stringify({
-        categoryName: name,
-        categoryDescription: description,
-        categoryColor: color
-    })
-})
-.then(response => {
-    if (response.ok) {
-        return response.json();  // Parse as JSON if successful
-    } else {
-        // If response is not ok, throw an error
-        return response.text().then(text => { throw new Error(text); });
-    }
-})
-.then(data => {
-    if (data.success) {
-        // Close the modal and refresh the page if successful
-        document.getElementById('editCategoryModal').style.display = 'none';
-        window.location.reload();
-    } else {
-        alert(data.error || 'Failed to update category.');
-    }
-})
-.catch(error => {
-    console.error('Error:', error);
-    alert('Failed to update category. Please try again.');
-});

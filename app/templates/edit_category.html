@@ -21,12 +21,12 @@
     {% endwith %}
 
 <!-- Edit Category form -->
-<form id="editCategoryForm" method="POST" action="">
+<form id="editCategoryForm" method="POST" action="{{ url_for('main.edit_category', category_id=category.id) }}">
     {{ form.hidden_tag() }}
-    <input type="hidden" id="editCategoryId" name="categoryId">
+    <input type="hidden" id="editCategoryId" name="categoryId" value="{{ category.id }}">
     <p>
         {{ form.name.label }}<br>
-        <input type="text" id="editCategoryName" name="categoryName" size="32">
+        <input type="text" id="editCategoryName" name="categoryName" value="{{ form.name.data }}" size="32">
     </p>
     <p>
         {{ form.description.label }}<br>
@@ -34,10 +34,11 @@
     </p>
     <p>
         {{ form.color.label }}<br>
-        <input type="color" id="editCategoryColor" name="categoryColor">
+        <input type="color" id="editCategoryColor" name="categoryColor" value="{{ form.color.data }}">
     </p>
     <p><button type="submit" class="btn">Save Changes</button></p>
 </form>
+
 
     <a href="{{ url_for('main.categories') }}">Back to Categories</a>
 </body>

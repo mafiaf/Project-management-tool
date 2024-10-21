@@ -12,23 +12,28 @@
     <h1>{{ category.name }}</h1>
     <p>{{ category.description }}</p>
 
-    <h2>Tasks:</h2>
+    <h2>Tasks for Selected Category:</h2>
     <ul>
         {% if tasks %}
             {% for task in tasks %}
                 <li>
                     <strong>{{ task.title }}</strong>: {{ task.description }}
                     <br>
+                    <!-- Links to edit, delete, share, and view comments on tasks -->
                     <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit</a>
                     <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
                         <button type="submit" class="btn btn-danger">Delete</button>
                     </form>
+                    <!-- Share Task Button -->
+                    <a href="{{ url_for('main.share_task', task_id=task.id) }}" class="btn btn-secondary">Share Task</a>
+                    <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
                 </li>
             {% endfor %}
         {% else %}
             <p>No tasks found in this category.</p>
         {% endif %}
     </ul>
+    
 
     <!-- Add link to go back to the dashboard -->
     <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>

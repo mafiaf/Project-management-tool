@@ -3,6 +3,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from sqlalchemy.orm import relationship
 from sqlalchemy import ForeignKey
+from enum import Enum
+
+class UserRole(Enum):
+    ADMIN = "Admin"
+    EDITOR = "Editor"
+    VIEWER = "Viewer"
 
 # Association table for many-to-many relationship between Task and User
 task_user = db.Table('task_user',
@@ -16,6 +22,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
+    role = db.Column(db.Enum(UserRole), default=UserRole.VIEWER)
 
     # Relationship to tasks - a user can own many tasks
     tasks_owned_by_user = relationship('Task', back_populates='task_owner', lazy=True)
@@ -25,7 +32,7 @@ class User(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-    
+
 class TaskInvitation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
@@ -62,7 +69,7 @@ class ActivityLog(db.Model):
     category = db.relationship('Category', back_populates='activity_logs')
 
 class Category(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(255), nullable=True)
     color = db.Column(db.String(7), nullable=False, default="#007bff")

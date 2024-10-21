@@ -25,10 +25,10 @@ class TaskForm(FlaskForm):
     submit = SubmitField('Save Changes')
 
 class ShareTaskForm(FlaskForm):
-    email = StringField('User Email', validators=[DataRequired(), Email()])
-    role = SelectField('Role', choices=[('Owner', 'Owner'), ('Editor', 'Editor'), ('Viewer', 'Viewer')], validators=[DataRequired()])
+    email = StringField('Invitee Email', validators=[DataRequired(), Email()])
+    role = SelectField('Role', choices=[('Viewer', 'Viewer'), ('Editor', 'Editor')], validators=[DataRequired()])
     submit = SubmitField('Share Task')
-
+    
 class CommentForm(FlaskForm):
     content = TextAreaField('Add a Comment', validators=[DataRequired()])
     submit = SubmitField('Post Comment')
@@ -38,3 +38,4 @@ class CategoryForm(FlaskForm):
     description = TextAreaField('Description')
     color = ColorField('Color', default='#007bff')
     submit = SubmitField('Save Category')
+
