@@ -119,6 +119,29 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('main.login'))
 
+@main.route('/settings', methods=['GET'])
+@login_required
+def settings():
+    return render_template('settings.html')
+
+@main.route('/statistics', methods=['GET'])
+@login_required
+def statistics():
+    return render_template('statistics.html')
+
+@main.route('/calendar', methods=['GET'])
+@login_required
+def calendar():
+    return render_template('calendar.html')
+
+@main.route('/my_tasks', methods=['GET'])
+@login_required
+def my_tasks():
+    user_id = session.get('user_id')
+    tasks = Task.query.filter_by(user_id=user_id).all()
+    return render_template('my_tasks.html', tasks=tasks)
+
+
 @main.route('/add_task', methods=['GET', 'POST'])
 @login_required
 def add_task():

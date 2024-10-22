@@ -9,6 +9,22 @@
 </head>
 
 <body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Task Manager</h2>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('main.my_tasks') }}">My Tasks</a></li>
+            <li><a href="{{ url_for('main.calendar') }}">Calendar</a></li>
+            <li><a href="{{ url_for('main.statistics') }}">Statistics</a></li>
+            <li><a href="{{ url_for('main.view_invitations') }}">Pending Invitations</a></li>
+            <li><a href="{{ url_for('main.settings') }}">Settings</a></li>
+        </ul>
+    </aside>
+
     <!-- Sticky Header -->
     <header class="sticky-header">
         <div class="top-right-icons">
@@ -27,9 +43,9 @@
         </div>
     </header>
 
-        
+<div class="title">        
     <h1>Welcome to your dashboard!</h1>
-
+</div>
 <!-- Grid container for category navigation -->
 <div class="categories-grid">
     {% if not categories %}
