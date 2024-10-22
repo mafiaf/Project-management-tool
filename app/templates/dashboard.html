@@ -9,20 +9,24 @@
 </head>
 
 <body>
-    <div class="top-right-icons">
-        <!-- Icon for Pending Invitations -->
-        <div class="icon-container" data-url="{{ url_for('main.view_invitations') }}">
-            <img src="{{ url_for('static', filename='icons/invitation-icon.png') }}" alt="Pending Invitations" title="Pending Invitations">
+    <!-- Sticky Header -->
+    <header class="sticky-header">
+        <div class="top-right-icons">
+            <!-- Icon for Pending Invitations -->
+            <div class="icon-container" data-url="{{ url_for('main.view_invitations') }}">
+                <img src="{{ url_for('static', filename='icons/invitation-icon.png') }}" alt="Pending Invitations" title="Pending Invitations">
+            </div>
+            <!-- Icon for Adding a New Task -->
+            <div class="icon-container" data-url="{{ url_for('main.add_task') }}">
+                <img src="{{ url_for('static', filename='icons/add-task-icon.png') }}" alt="Add New Task" title="Add New Task">
+            </div>
+            <!-- Icon for Logout -->
+            <div class="icon-container" data-url="{{ url_for('main.logout') }}">
+                <img src="{{ url_for('static', filename='icons/logout-icon.png') }}" alt="Logout" title="Logout">
+            </div>
         </div>
-        <!-- Icon for Adding a New Task -->
-        <div class="icon-container" data-url="{{ url_for('main.add_task') }}">
-            <img src="{{ url_for('static', filename='icons/add-task-icon.png') }}" alt="Add New Task" title="Add New Task">
-        </div>
-        <!-- Icon for Logout -->
-        <div class="icon-container" data-url="{{ url_for('main.logout') }}">
-            <img src="{{ url_for('static', filename='icons/logout-icon.png') }}" alt="Logout" title="Logout">
-        </div>
-    </div>
+    </header>
+
         
     <h1>Welcome to your dashboard!</h1>
 

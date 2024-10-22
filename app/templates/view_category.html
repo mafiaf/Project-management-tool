@@ -35,7 +35,6 @@
                         <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
                             <button type="submit" class="btn btn-danger">Delete</button>
                         </form>
-                        <a href="{{ url_for('main.share_task', task_id=task.id) }}" class="btn btn-secondary">Share Task</a>
                         <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
                     </div>
                 </div>
