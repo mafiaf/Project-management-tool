@@ -858,13 +858,26 @@ def mark_all_completed(category_id):
 @login_required
 def get_tasks():
     user_id = session.get('user_id')
-    
-    # Get all tasks owned or shared with the user
-    tasks = Task.query.filter_by(user_id=user_id).all()
+    task_id = request.args.get('task_id', type=int)  # Get task_id from query parameter if available
+
+    # Logging for debugging purposes
+    if task_id:
+        logger.info(f"Fetching specific task with ID: {task_id} for user: {user_id}")
+    else:
+        logger.info(f"Fetching all tasks for user: {user_id}")
+
+    # Fetch all tasks if no specific task_id is provided
+    if task_id is None:
+        # Get all tasks owned or shared with the user
+        tasks = Task.query.filter_by(user_id=user_id).all()
+    else:
+        # Get the specific task
+        tasks = Task.query.filter_by(id=task_id, user_id=user_id).all()
 
     # Prepare tasks for FullCalendar
     events = []
     for task in tasks:
+        logger.info(f"Task found: {task.title}, Start Time: {task.start_time}, End Time: {task.end_time}")
         events.append({
             'id': task.id,
             'title': task.title,
@@ -873,5 +886,8 @@ def get_tasks():
             'color': task.category.color if task.category else '#378006',  # Use category color or default
             'url': url_for('main.view_task', task_id=task.id)  # Link to task details if needed
         })
+
+    # Log the events being returned
+    logger.info(f"Events returned: {events}")
 
     return jsonify(events)

@@ -1,0 +1,146 @@
+/* Container styles for the calendar */
+#calendar {
+    max-width: 1100px;
+    margin: 40px auto;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    padding: 15px;
+}
+
+/* Toolbar styles */
+.fc-header-toolbar {
+    background-color: #222;
+    color: #fff;
+    padding: 10px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Button styles */
+.fc-button-group .fc-button {
+    background-color: #444;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 15px;
+    margin: 0 5px;
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.fc-button-group .fc-button:hover {
+    background-color: #555;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Style the calendar cells (day cells) */
+.fc-daygrid-day {
+    border: 1px solid #ddd;
+    padding: 10px;
+    height: 120px;
+    position: relative;
+    transition: background-color 0.3s;
+}
+
+.fc-daygrid-day:hover {
+    background-color: #f0f8ff; /* Light blue on hover */
+}
+
+/* Highlight today's cell */
+.fc-day-today {
+    background-color: #e6f7ff; /* Lighter highlight for today */
+    border: 2px solid #007bff; /* Distinct border for today */
+}
+
+/* Header for each day (e.g., Monday, 1) */
+.fc-daygrid-day-top {
+    font-weight: bold;
+    padding: 5px;
+    text-align: center;
+    background-color: #f0f0f0; /* Light grey background for headers */
+    border-bottom: 1px solid #ddd;
+}
+
+/* Event styles */
+.fc-event {
+    background-color: #ff6347; /* Tomato color for events */
+    color: #fff;
+    padding: 5px;
+    margin: 5px 0;
+    font-size: 0.9rem;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    overflow: hidden;  /* Ensures content doesn't spill outside */
+    white-space: normal;  /* Allow text to wrap to a new line */
+    line-height: 1.2;  /* Increase line height to provide spacing for text */
+    height: auto;  /* Allow the block to expand based on content */
+    min-height: 40px;  /* Set a minimum height for event blocks */
+}
+
+/* Ensure that day/week view events grow based on content */
+.fc-timegrid-event {
+    min-height: 40px;  /* Minimum height for better visibility */
+    height: auto;  /* Expand height dynamically based on content */
+    display: flex;
+    align-items: center;
+    white-space: normal;  /* Allow text to wrap to new lines if needed */
+}
+
+/* For all-day events */
+.fc-daygrid-event {
+    height: auto;  /* Let all-day events also expand based on content */
+    padding: 5px;
+    line-height: 1.2;
+}
+
+/* Specific adjustments for time-grid events in week/day views */
+.fc-timegrid-slot {
+    position: relative;
+    overflow: visible;  /* Make sure the slot container doesn't hide content */
+}
+
+/* Tooltip or additional styling for overflow handling */
+.fc-event:hover {
+    transform: scale(1.05);
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    z-index: 10;  /* Elevate the event during hover */
+}
+/* For draggable events */
+.fc-event-draggable {
+    cursor: grab;
+}
+
+.fc-event-draggable:active {
+    cursor: grabbing;
+    opacity: 0.9;
+}
+
+/* Event resizing handlers */
+.fc-event-resizer {
+    background-color: #222; /* Darker color for resize handles */
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    #calendar {
+        max-width: 100%;
+        padding: 10px;
+    }
+
+    .fc-header-toolbar {
+        flex-direction: column;
+        padding: 15px;
+    }
+
+    .fc-button-group .fc-button {
+        margin-bottom: 5px;
+    }
+}
