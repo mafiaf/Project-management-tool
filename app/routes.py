@@ -1,8 +1,12 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, redirect, jsonify
+from flask import Flask, session, Blueprint, render_template, redirect, url_for, flash, request, session, redirect, jsonify
+from flask_sqlalchemy import SQLAlchemy
 from .models import User, Task, db, TaskInvitation, task_user, Category, ActivityLog, Comment   #Model imports
 from .forms import RegistrationForm, LoginForm, TaskForm, ShareTaskForm, CommentForm, CategoryForm, CancelInvitationForm    # Import the forms
 from app.utils import login_required, role_required
 import logging  # Import logging for debugging
+from datetime import datetime, timedelta
+import calendar
+import json
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -162,6 +166,11 @@ def add_task():
     if category_id is not None:
         form.category.data = category_id
 
+    # If date is passed from FullCalendar, pre-fill the start_time
+    date_str = request.args.get('date', None)
+    if date_str:
+        form.start_time.data = datetime.strptime(date_str, '%Y-%m-%d')
+
     if form.validate_on_submit():
         # Set category_id to None if "No Category" is selected
         selected_category_id = form.category.data
@@ -173,6 +182,8 @@ def add_task():
             new_task = Task(
                 title=form.title.data,
                 description=form.description.data,
+                start_time=form.start_time.data,
+                end_time=form.end_time.data,
                 category_id=selected_category_id,
                 user_id=user_id  # Associate task with the logged-in user
             )
@@ -207,6 +218,63 @@ def add_task():
 
     return render_template('add_task.html', form=form, title="Add New Task", heading="Add New Task", submit_label="Add Task")
 
+# Update Task - Drag and Drop functionality
+@main.route('/update_task', methods=['POST'])
+@login_required
+def update_task():
+    try:
+        data = request.get_json()  # Parse incoming JSON data
+        if data is None:
+            return jsonify({'status': 'error', 'message': 'Invalid or missing JSON data'}), 400
+
+        task_id = data.get('id')
+        new_start_time = data.get('new_start_time')
+        new_end_time = data.get('new_end_time')
+
+        if not task_id or not new_start_time:
+            return jsonify({'status': 'error', 'message': 'Missing task ID or start time'}), 400
+
+        # Convert start and end times from ISO format to datetime objects
+        task = Task.query.get(task_id)
+        if task:
+            task.start_time = datetime.fromisoformat(new_start_time)
+            if new_end_time:
+                task.end_time = datetime.fromisoformat(new_end_time)
+            else:
+                task.end_time = None
+            db.session.commit()
+            return jsonify({'status': 'success'})
+        else:
+            return jsonify({'status': 'error', 'message': 'Task not found'}), 404
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+
+# Handling Recurring Tasks Logic
+@main.route('/handle_recurring_tasks')
+@login_required
+def handle_recurring_tasks():
+    tasks = Task.query.all()
+    today = datetime.now().date()
+    
+    for task in tasks:
+        if task.recurring:
+            if task.recurring == 'daily':
+                while task.start_time.date() < today:
+                    task.start_time += timedelta(days=1)
+                    task.end_time += timedelta(days=1)
+            elif task.recurring == 'weekly':
+                while task.start_time.date() < today:
+                    task.start_time += timedelta(weeks=1)
+                    task.end_time += timedelta(weeks=1)
+            elif task.recurring == 'monthly':
+                while task.start_time.date() < today:
+                    month_days = calendar.monthrange(task.start_time.year, task.start_time.month)[1]
+                    task.start_time += timedelta(days=month_days)
+                    task.end_time += timedelta(days=month_days)
+            db.session.commit()
+    return redirect(url_for('main.dashboard'))
 
 @main.route('/edit_task/<int:task_id>', methods=['GET', 'POST'])
 @login_required
@@ -533,16 +601,24 @@ def manage_task_users(task_id):
         form=form
     )
 
-    # Get all users (to potentially add to the task)
-    users = User.query.all()
+# Conflict Detection
+@main.route('/check_task_conflict', methods=['POST'])
+@login_required
+def check_task_conflict():
+    start_time = datetime.strptime(request.form.get('start_time'), "%Y-%m-%d %H:%M")
+    end_time = datetime.strptime(request.form.get('end_time'), "%Y-%m-%d %H:%M")
+    conflicting_tasks = Task.query.filter(
+        (Task.start_time < end_time) & (Task.end_time > start_time)
+    ).all()
+    
+    if conflicting_tasks:
+        return jsonify({'status': 'conflict', 'message': 'Scheduling conflict detected'})
+    return jsonify({'status': 'available'})
 
-    return render_template(
-        'manage_task_users.html',
-        task=task,
-        users_assigned=users_assigned,
-        users=users
-    )
-
+@main.route('/calendar', methods=['GET'])
+@login_required
+def task_calendar():
+    return render_template('calendar.html')
 
 @main.route('/task/<int:task_id>', methods=['GET'])
 @login_required
@@ -757,7 +833,6 @@ def add_category():
 
 
 
-
 @main.route('/mark_all_completed/<int:category_id>', methods=['POST'])
 @login_required
 @role_required('Admin', 'Owner')
@@ -778,3 +853,25 @@ def mark_all_completed(category_id):
     
     flash('All tasks marked as completed!', 'success')
     return redirect(url_for('main.dashboard'))
+
+@main.route('/api/tasks', methods=['GET'])
+@login_required
+def get_tasks():
+    user_id = session.get('user_id')
+    
+    # Get all tasks owned or shared with the user
+    tasks = Task.query.filter_by(user_id=user_id).all()
+
+    # Prepare tasks for FullCalendar
+    events = []
+    for task in tasks:
+        events.append({
+            'id': task.id,
+            'title': task.title,
+            'start': task.start_time.strftime('%Y-%m-%dT%H:%M:%S'),  # Assuming start_time is a datetime field
+            'end': task.end_time.strftime('%Y-%m-%dT%H:%M:%S') if task.end_time else None,  # End time is optional
+            'color': task.category.color if task.category else '#378006',  # Use category color or default
+            'url': url_for('main.view_task', task_id=task.id)  # Link to task details if needed
+        })
+
+    return jsonify(events)

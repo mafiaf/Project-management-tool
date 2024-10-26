@@ -4,6 +4,10 @@ from datetime import datetime
 from sqlalchemy.orm import relationship
 from sqlalchemy import ForeignKey
 from enum import Enum
+from flask_wtf import FlaskForm 
+from wtforms import StringField, TextAreaField, DateTimeField, BooleanField 
+from wtforms.validators import DataRequired, Optional 
+
 
 class UserRole(Enum):
     ADMIN = "Admin"
@@ -86,9 +90,20 @@ class Task(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)
     completed = db.Column(db.Boolean, default=False)
+    
+    # New fields for start time and end time
+    start_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)  # Start time of the task
+    end_time = db.Column(db.DateTime, nullable=True)  # Optional end time of the task
+    
+    # Relationships
+    category = relationship('Category', back_populates='tasks')  # Relationship to Category
+    task_owner = relationship('User', back_populates='tasks_owned_by_user')  # Relationship to User
 
-    # Relationship to Category
-    category = relationship('Category', back_populates='tasks')
+class TaskForm(FlaskForm):
+    title = StringField('Title', validators=[DataRequired()])
+    description = TextAreaField('Description')
+    start_time = DateTimeField('Start Time', format='%Y-%m-%d %H:%M:%S', validators=[DataRequired()])
+    end_time = DateTimeField('End Time', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
+    completed = BooleanField('Completed')
 
-    # Relationship to User
-    task_owner = relationship('User', back_populates='tasks_owned_by_user')
+    
