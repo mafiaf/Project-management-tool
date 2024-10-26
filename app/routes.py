@@ -1,7 +1,7 @@
 from flask import Flask, session, Blueprint, render_template, redirect, url_for, flash, request, session, redirect, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from .models import User, Task, db, TaskInvitation, task_user, Category, ActivityLog, Comment   #Model imports
-from .forms import RegistrationForm, LoginForm, TaskForm, ShareTaskForm, CommentForm, CategoryForm, CancelInvitationForm    # Import the forms
+from .forms import RegistrationForm, LoginForm, TaskForm, ShareTaskForm, CommentForm, CategoryForm, CancelInvitationForm, UpdateProfileForm, ChangePasswordForm    # Import the forms
 from app.utils import login_required, role_required
 import logging  # Import logging for debugging
 from datetime import datetime, timedelta
@@ -12,6 +12,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 main = Blueprint('main', __name__)
+
 
 @main.route('/')
 def home():
@@ -63,6 +64,77 @@ def login():
             logger.warning(f"Failed login attempt for email: {form.email.data}")
             flash('Login failed. Please check your email and password.', 'danger')
     return render_template('login.html', form=form)
+
+@main.route('/profile', methods=['GET', 'POST'])
+def profile():
+    if 'user_id' not in session:
+        flash('You need to be logged in to view your profile.', 'danger')
+        return redirect(url_for('main.login'))
+
+    # Get the current user from the session
+    user = User.query.get(session['user_id'])
+    if not user:
+        flash('Unauthorized access.', 'danger')
+        return redirect(url_for('main.login'))
+
+    # Instantiate the profile update form and prefill it with user data
+    form = UpdateProfileForm(obj=user)
+
+    # Instantiate the change password form
+    change_password_form = ChangePasswordForm()
+
+    # Handle profile update
+    if form.validate_on_submit() and 'update_profile' in request.form:
+        # Check for email or username conflicts
+        if form.email.data != user.email and User.query.filter_by(email=form.email.data).first():
+            flash('Email is already in use. Please choose a different one.', 'danger')
+            return render_template('profile.html', form=form, change_password_form=change_password_form, user=user)
+
+        if form.username.data != user.username and User.query.filter_by(username=form.username.data).first():
+            flash('Username is already in use. Please choose a different one.', 'danger')
+            return render_template('profile.html', form=form, change_password_form=change_password_form, user=user)
+
+        # Update user information
+        user.email = form.email.data
+        user.username = form.username.data
+        db.session.commit()
+        flash('Profile updated successfully!', 'success')
+
+    return render_template('profile.html', form=form, change_password_form=change_password_form, user=user)
+
+@main.route('/change_password', methods=['POST'])
+def change_password():
+    # Authentication check
+    if 'user_id' not in session:
+        flash('You need to be logged in to change your password.', 'danger')
+        return redirect(url_for('main.login'))
+
+    # Fetch current user
+    user = User.query.get(session['user_id'])
+    if not user:
+        flash('Unauthorized access.', 'danger')
+        return redirect(url_for('main.login'))
+
+    form = ChangePasswordForm()
+
+    if form.validate_on_submit():
+        # Verify current password matches the stored password hash
+        if not user.check_password(form.current_password.data):
+            flash('Current password is incorrect.', 'danger')
+            return redirect(url_for('main.profile'))
+
+        # Verify new password and confirmation match
+        if form.new_password.data != form.confirm_password.data:
+            flash('New password and confirmation do not match.', 'danger')
+            return redirect(url_for('main.profile'))
+
+        # Update password (hash it)
+        user.set_password(form.new_password.data)
+        db.session.commit()
+        flash('Password updated successfully!', 'success')
+
+    return redirect(url_for('main.profile'))
+
 
 @main.route('/dashboard', methods=['GET'])
 @login_required
@@ -891,3 +963,4 @@ def get_tasks():
     logger.info(f"Events returned: {events}")
 
     return jsonify(events)
+

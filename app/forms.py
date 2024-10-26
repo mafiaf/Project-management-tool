@@ -41,3 +41,41 @@ class CategoryForm(FlaskForm):
 
 class CancelInvitationForm(FlaskForm):
     pass
+
+class UpdateProfileForm(FlaskForm):
+    username = StringField(
+        'Username', 
+        validators=[
+            DataRequired(), 
+            Length(min=3, max=25, message="Username must be between 3 and 25 characters.")
+        ]
+    )
+    email = StringField(
+        'Email', 
+        validators=[
+            DataRequired(), 
+            Email(message="Please enter a valid email address.")
+        ]
+    )
+    submit = SubmitField('Update Profile')
+
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField(
+        'Current Password', 
+        validators=[DataRequired(message="Please enter your current password.")]
+    )
+    new_password = PasswordField(
+        'New Password', 
+        validators=[
+            DataRequired(message="Please enter a new password."),
+            Length(min=8, message="Password must be at least 8 characters long."),
+        ]
+    )
+    confirm_password = PasswordField(
+        'Confirm New Password', 
+        validators=[
+            DataRequired(message="Please confirm your new password."),
+            EqualTo('new_password', message="Passwords must match.")
+        ]
+    )
+    submit = SubmitField('Change Password')
