@@ -6,10 +6,13 @@
     <title>Project Management Tool</title>
 </head>
 <body>
+    {% extends "base.html" %} 
+    {% block content %}
     <h1>Welcome to the Project Management Tool</h1>
     <p>
             <a href="{{ url_for('main.login')}}">Login</a>
             <a href="{{ url_for('main.register') }}">Register</a>
     </p>
+    {% endblock %}
 </body>
 </html>

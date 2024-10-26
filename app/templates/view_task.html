@@ -17,6 +17,8 @@
     <link href="{{ url_for('static', filename='css/custom-calendar.css') }}" rel="stylesheet">
 </head>
 <body>
+    {% extends "base.html" %} 
+    {% block content %}
     <input type="hidden" id="taskId" value="{{ task.id }}">
     <!-- Task Details -->
     <h1>{{ task.title }}</h1>
@@ -79,6 +81,7 @@
             calendar.render();
         });
     </script>    
+    {% endblock %}
     
 </body>
 </html>

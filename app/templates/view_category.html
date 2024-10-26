@@ -9,6 +9,8 @@
 </head>
 
 <body>
+    {% extends "base.html" %} 
+    {% block content %}
     <h1>{{ category.name }}</h1>
     <p>{{ category.description }}</p>
 
@@ -51,6 +53,7 @@
     <!-- JavaScript -->
     <script src="{{ url_for('static', filename='category.js') }}"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+    {% endblock %}
 </body>
 
 </html>

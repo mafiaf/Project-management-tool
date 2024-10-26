@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+    {% extends "base.html" %} 
+    {% block content %}
+        <div class="main-content">
+
     <h1>Manage Your Categories</h1>
 
     <!-- Display flashed messages -->
@@ -68,4 +72,6 @@
         <p>You have no categories yet.</p>
     {% endif %}
 
-    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard
+</div>
+
+{% endblock %}

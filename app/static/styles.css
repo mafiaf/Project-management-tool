@@ -25,47 +25,79 @@
 
 }
 
+/* Main Content Styling */
+.main-content {
+    margin-left: 250px; 
+    padding: 20px;
+    box-sizing: border-box;
+    flex-grow: 1;
+}
+
+
 /* Sidebar Styling */
 .sidebar {
-    width: 200px; 
-    height: 85%; 
+    width: 200px;
+    height: 85%;
     position: fixed;
-    background-color: var(--sidebar-background, #2e3b4e);
-    color: var(--sidebar-text-color, #ffffff);
+    background-color: var(--sidebar-background, #f8f9fa);
+    color: #333;
     padding: 20px;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
     z-index: 1000;
+    border-radius: 30px;
     display: flex;
     flex-direction: column;
     gap: 20px;
-    border-radius: 25px; 
-    top: 5%;
-    left: 20px; 
+    top: 8%;
+    left: 20px;
 }
 
+/* Sidebar Header */
 .sidebar-header {
     font-size: 1.5em;
     font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 20px;
 }
 
+/* Sidebar Menu */
 .sidebar-menu {
     list-style: none;
     padding: 0;
 }
 
+/* Sidebar Menu Items */
 .sidebar-menu li {
     margin: 15px 0;
 }
 
+/* Sidebar Menu Links */
 .sidebar-menu a {
-    color: var(--sidebar-text-color);
+    color: #333; 
     text-decoration: none;
-    transition: color 0.3s;
+    transition: color 0.3s, background-color 0.3s;
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-weight: bold; 
 }
 
-.sidebar-menu a:hover {
-    color: var(--primary-color);
+/* Active Menu Item */
+.sidebar-menu a.active {
+    background-color: #333; 
+    color: #ffffff; 
+    font-weight: bold;
 }
+
+/* Hover Effect for Sidebar Menu Items */
+.sidebar-menu a:hover {
+    background-color: #333; 
+    color: #ffffff;
+}
+
 
 /* Sticky Header */
 .sticky-header {
@@ -75,7 +107,7 @@
     background-color: rgba(255, 255, 255, 0.8); 
     padding: 25px 30px; 
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    z-index: 900;
+    z-index: 850;
 }
 
 /* Top Right Icons */
@@ -105,6 +137,30 @@
 
 .icon-container img:hover {
     filter: brightness(0.8);
+}
+
+/* Teams Item Styling */
+.team-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px;
+    border-radius: 8px;
+}
+
+.team-item .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+/* Specific Team Colors */
+.team-item.seo .dot {
+    background-color: black;
+}
+
+.team-item.marketing .dot {
+    background-color: #6c757d;
 }
 
 /* Grid container for categories */

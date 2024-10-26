@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+    {% extends "base.html" %} 
+    {% block content %}
     <h1>Edit Task</h1>
 
     <!-- Display flashed messages -->
@@ -39,5 +41,6 @@
     </form>    
 
     <a href="{{ url_for('main.dashboard') }}">Back to Dashboard</a>
+    {% endblock %}
 </body>
 </html>

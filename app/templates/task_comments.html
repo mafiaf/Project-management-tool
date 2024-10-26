@@ -6,6 +6,8 @@
     <title>Task Comments</title>
 </head>
 <body>
+    {% extends "base.html" %} 
+    {% block content %}
     <h1>Comments for Task: {{ task.title }}</h1>
 
     <form method="POST">
@@ -37,5 +39,6 @@
 
 
     <a href="{{ url_for('main.dashboard') }}">Back to Dashboard</a>
+    {% endblock %}
 </body>
 </html>

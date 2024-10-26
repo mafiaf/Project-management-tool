@@ -9,6 +9,8 @@
 </head>
 
 <body>
+    {% extends "base.html" %} 
+    {% block content %}
     <!-- Flash Messages Section -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -69,6 +71,7 @@
     </form>    
 
     <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    {% endblock %}
 </body>
 
 </html>

@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+    {% extends "base.html" %} 
+    {% block content %}    
     <h1>Edit Category</h1>
 
     <!-- Display flashed messages -->
@@ -41,5 +43,6 @@
 
 
     <a href="{{ url_for('main.categories') }}">Back to Categories</a>
+    {% endblock %}
 </body>
 </html>

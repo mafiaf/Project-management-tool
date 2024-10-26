@@ -7,6 +7,7 @@
     
         <!-- FullCalendar CSS -->
         <link href="{{ url_for('static', filename='css/custom-calendar.css') }}" rel="stylesheet">
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     
         <!-- FullCalendar JS files -->
         <script src="{{ url_for('static', filename='@fullcalendar/core/index.global.min.js') }}"></script>
@@ -24,15 +25,18 @@
     </head>
     
 <body>
+    {% extends "base.html" %} 
+    {% block content %}
 
     <!-- Calendar Container -->
     <div id="calendar"></div>
+
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var calendarEl = document.getElementById('calendar');
             var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
+    
             var calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
                 firstDay: 1,  // Start the week from Monday
@@ -97,10 +101,17 @@
                     });
                 }
             });
-
+    
             calendar.render();
+    
+            // Make sticky header icons clickable
+            document.querySelectorAll('.icon-container').forEach(function(icon) {
+                icon.addEventListener('click', function() {
+                    window.location.href = icon.dataset.url;
+                });
+            });
         });
     </script>
-
+        {% endblock %}
 </body>
 </html>

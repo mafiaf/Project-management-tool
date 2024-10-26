@@ -4,30 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>  <!-- Set title dynamically -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>{{ heading }}</h1>  <!-- Set heading dynamically -->
+    {% extends "base.html" %} 
+    {% block content %}
+    <!-- Main Content -->
+    <div class="main-content">
+        <h1>{{ heading }}</h1>  <!-- Set heading dynamically -->
 
-    <form method="POST" action="{{ url_for('main.add_task') }}">
-        {{ form.hidden_tag() }}
-        <div>
-            {{ form.title.label }}<br>
-            {{ form.title(size=32) }}
-        </div>
-        <div>
-            {{ form.description.label }}<br>
-            {{ form.description(rows=4) }}
-        </div>
-        <div>
-            {{ form.category.label }}<br>
-            {{ form.category() }}
-        </div>
-        <div>
-            <button type="submit">{{ submit_label }}</button>
-        </div>
-    </form>
-    
+        <form method="POST" action="{{ url_for('main.add_task') }}">
+            {{ form.hidden_tag() }}
+            <div>
+                {{ form.title.label }}<br>
+                {{ form.title(size=32) }}
+            </div>
+            <div>
+                {{ form.description.label }}<br>
+                {{ form.description(rows=4) }}
+            </div>
+            <div>
+                {{ form.category.label }}<br>
+                {{ form.category() }}
+            </div>
+            <div>
+                <button type="submit">{{ submit_label }}</button>
+            </div>
+        </form>
 
-    <a href="{{ url_for('main.dashboard') }}">Back to Dashboard</a>
+        <a href="{{ url_for('main.dashboard') }}">Back to Dashboard</a>
+    </div>
+    {% endblock %}
 </body>
 </html>

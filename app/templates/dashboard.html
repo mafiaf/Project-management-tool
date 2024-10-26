@@ -9,40 +9,8 @@
 </head>
 
 <body>
-
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <h2>Task Manager</h2>
-        </div>
-        <ul class="sidebar-menu">
-            <li><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
-            <li><a href="{{ url_for('main.my_tasks') }}">My Tasks</a></li>
-            <li><a href="{{ url_for('main.calendar') }}">Calendar</a></li>
-            <li><a href="{{ url_for('main.statistics') }}">Statistics</a></li>
-            <li><a href="{{ url_for('main.view_invitations') }}">Pending Invitations</a></li>
-            <li><a href="{{ url_for('main.settings') }}">Settings</a></li>
-        </ul>
-    </aside>
-
-    <!-- Sticky Header -->
-    <header class="sticky-header">
-        <div class="top-right-icons">
-            <!-- Icon for Pending Invitations -->
-            <div class="icon-container" data-url="{{ url_for('main.view_invitations') }}">
-                <img src="{{ url_for('static', filename='icons/invitation-icon.png') }}" alt="Pending Invitations" title="Pending Invitations">
-            </div>
-            <!-- Icon for Adding a New Task -->
-            <div class="icon-container" data-url="{{ url_for('main.add_task') }}">
-                <img src="{{ url_for('static', filename='icons/add-task-icon.png') }}" alt="Add New Task" title="Add New Task">
-            </div>
-            <!-- Icon for Logout -->
-            <div class="icon-container" data-url="{{ url_for('main.logout') }}">
-                <img src="{{ url_for('static', filename='icons/logout-icon.png') }}" alt="Logout" title="Logout">
-            </div>
-        </div>
-    </header>
-
+    {% extends "base.html" %} 
+    {% block content %}
 <div class="title">        
     <h1>Welcome to your dashboard!</h1>
 </div>
@@ -142,87 +110,9 @@
     </div>
 </div>
 
-<!-- Display tasks grouped by selected category -->
-<h2>Tasks for Selected Category:</h2>
-<ul>
-    {% if owned_tasks %}
-        <h3>Owned Tasks:</h3>
-        {% for task in owned_tasks %}
-            <li>
-                <a href="{{ url_for('main.view_task', task_id=task.id) }}">
-                    <strong>{{ task.title }}</strong>
-                </a>: {{ task.description }}
-                <br>
-                <!-- Links to edit, delete, share, and view comments on tasks -->
-                <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit</a>
-                <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
-                <a href="{{ url_for('main.share_task', task_id=task.id) }}" class="btn btn-secondary">Share Task</a>
-                <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
-            </li>
-        {% endfor %}
-    {% else %}
-        <p>No owned tasks found in this category.</p>
-    {% endif %}
-</ul>
-
-
-<!-- Display shared tasks -->
-<h2>Shared Tasks:</h2>
-<ul>
-    {% if shared_tasks %}
-        {% for task, role in shared_tasks %}
-            <li>
-                <a href="{{ url_for('main.view_task', task_id=task.id) }}">
-                    <strong>{{ task.title }}</strong>
-                </a>: {{ task.description }} (Role: {{ role }})
-                <br>
-                <!-- Links to view and interact with shared tasks (editor/viewer may have limited actions) -->
-                <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
-
-                <!-- Only show edit button if the user's role is Editor or Admin -->
-                {% if role in ['Editor', 'Admin'] %}
-                    <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn btn-secondary">Edit Task</a>
-                {% endif %}
-            </li>
-        {% endfor %}
-    {% else %}
-        <p>No shared tasks found.</p>
-    {% endif %}
-</ul>
-
-
-<!-- Display uncategorized tasks -->
-<h2>Uncategorized Tasks:</h2>
-<ul>
-    {% if uncategorized_tasks %}
-        {% for task in uncategorized_tasks %}
-            <li>
-                <a href="{{ url_for('main.view_task', task_id=task.id) }}">
-                    <strong>{{ task.title }}</strong>
-                </a>: {{ task.description }}
-                <br>
-                <!-- Links to edit, delete, share, and view comments on tasks -->
-                <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit</a>
-                <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
-                <a href="{{ url_for('main.share_task', task_id=task.id) }}" class="btn btn-secondary">Share Task</a>
-                <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
-            </li>
-        {% endfor %}
-    {% else %}
-        <p>No uncategorized tasks found.</p>
-    {% endif %}
-</ul>
-
-
-<!-- Links -->
-<a href="{{ url_for('main.add_task') }}" class="btn">Add New Task</a><br><br>
-<a href="{{ url_for('main.logout') }}" class="btn btn-secondary">Logout</a>
 
 <!-- Scripts -->
 <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+{% endblock %}
 </body>
 </html>
