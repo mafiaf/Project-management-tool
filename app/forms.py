@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, PasswordField, SubmitField, SelectField
+from wtforms import StringField, TextAreaField, PasswordField, SubmitField, SelectField, BooleanField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional
 from wtforms_components import ColorField
 
@@ -35,8 +35,25 @@ class CommentForm(FlaskForm):
 
 class CategoryForm(FlaskForm):
     name = StringField('Category Name', validators=[DataRequired()])
-    description = TextAreaField('Description')
-    color = ColorField('Color', default='#007bff')
+    description = TextAreaField('Description', validators=[Optional()])
+    color = ColorField('Color', default='#007bff', validators=[DataRequired()])
+    priority_level = SelectField(
+        'Priority Level',
+        choices=[('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High')],
+        default='Medium',
+        validators=[DataRequired()]
+    )
+    visibility = SelectField(
+        'Visibility',
+        choices=[('Public', 'Public'), ('Private', 'Private')],
+        default='Private',
+        validators=[DataRequired()]
+    )
+    is_shared = BooleanField('Share this Category?')
+    default_reminders = BooleanField('Default Reminders for Tasks')
+    icon = StringField('Icon Path or Name', validators=[Optional()])
+    archived = BooleanField('Archived')
+
     submit = SubmitField('Save Category')
 
 class CancelInvitationForm(FlaskForm):

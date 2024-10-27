@@ -7,150 +7,186 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    {% extends "base.html" %} 
+    {% extends "base.html" %}
     {% block content %}
+        <!-- Display flashed messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flashed-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
         <div class="main-content">
-            <div class="title">        
+            <div class="title">
                 <h1>Manage your categories</h1>
             </div>
-    <div class="categories-grid">
-        {% if not categories %}
-            <p class="no-categories-message">You have no categories yet. Click the add button to create one.</p>
-        {% endif %}
-        <div class="grid-container">
-            {% if categories %}
-            {% for category in categories %}
-            <div class="category-card" data-category-id="{{ category.id }}" style="position: relative; background-color: {{ category.color | safe }};">
-                <!-- Shared Badge (only if shared) -->
-                {% if category.shared %}
-                    <div class="shared-badge">&#x1F4E4;</div>
+            <div class="categories-grid">
+                {% if not categories %}
+                    <p class="no-categories-message">You have no categories yet. Click the add button to create one.</p>
                 {% endif %}
-    
-                <!-- Three Dots Menu for additional actions -->
-                <div class="menu-icon" onclick="toggleMenu('{{ category.id }}')">&#x22EE;</div>
-    
-                <!-- Dropdown Menu for actions like Edit or Delete -->
-                <div class="menu-options" id="menu-{{ category.id }}" style="display: none;">
-                    <div class="menu-item">
-                        <a href="#" onclick="openEditCategoryModal(event, '{{ category.id }}')">
-                            <span class="edit-icon">&#x270E;</span> Edit
-                        </a>
-                    </div>
-                    <div class="menu-item">
-                        <a href="#" onclick="deleteCategory(event, '{{ category.id }}')">
-                            <span class="delete-icon">&#x1F5D1;</span> Delete
-                        </a>
-                    </div>
-                </div>
-    
-                <!-- Category Card Content -->
-                <h3>{{ category.name }}</h3>
-                <p class="category-description">{{ category.description }}</p> <!-- Added category description -->
-                <p>Top 5 Tasks:</p>
-                <ul>
-                    {% for task in category.tasks[:5] %}
-                        <li>{{ task.title }}</li>
-                    {% endfor %}
-                </ul>
-                <p>Tasks Completed: {{ category.completed_tasks }} / {{ category.task_count }}</p> <!-- Task Count Summary -->
-                <button class="add-task-btn" data-category-id="{{ category.id }}">Add Task</button>
-                <button class="mark-all-btn" data-category-id="{{ category.id }}">Mark All as Completed</button>
-            </div>
-            {% endfor %}        
-            {% endif %}
-        </div>
-    </div>
-    
-    <!-- Button to add a new category -->
-    <div class="add-category-card" onclick="document.getElementById('categoryModal').style.display='block';">
-        <h2>+</h2>
-    </div>
+                <div class="grid-container">
+                    {% if categories %}
+                        {% for category in categories %}
+                        <div class="category-card" data-category-id="{{ category.id }}" style="position: relative; background-color: {{ category.color | safe }};">
+                            <!-- Shared Badge (only if shared) -->
+                            {% if category.is_shared %}
+                                <div class="shared-badge">&#x1F4E4;</div>
+                            {% endif %}
+                        
+                            <!-- Three Dots Menu for additional actions moved to the right side -->
+                            <div class="menu-icon" onclick="toggleMenu('{{ category.id }}')" style="position: absolute; top: 10px; right: 10px;">&#x22EE;</div>
+                        
+                            <!-- Dropdown Menu for actions like Edit or Delete -->
+                            <div class="menu-options" id="menu-{{ category.id }}" style="display: none; position: absolute; right: 10px; top: 20px;">
+                                <div class="menu-item">
+                                    <!-- Updated Edit Button -->
+                                    <a href="#" onclick="openEditCategoryModal(event, '{{ category.id }}', '{{ category.name }}', '{{ category.description }}', '{{ category.color }}', '{{ category.priority_level }}', '{{ category.visibility }}', '{{ category.is_shared }}', '{{ category.icon }}', '{{ category.archived }}')">
+                                        <span class="edit-icon">&#x270E;</span> Edit
+                                    </a>                                        
+                                </div>
+                                <div class="menu-item">
+                                    <form action="{{ url_for('main.delete_category', category_id=category.id) }}" method="POST" style="display:inline;">
+                                        {{ form.hidden_tag() }}
+                                        <button type="submit" class="btn btn-danger" onclick="event.stopPropagation();">
+                                            <span class="delete-icon">&#x1F5D1;</span> Delete
+                                        </button>
+                                    </form>
+                                </div>                                
+                            </div>
+                        
+                            <!-- Category Card Content -->
+                            <h3>{{ category.name }}</h3>
+                            <p class="category-description">{{ category.description }}</p>
+                            <p class="priority-level">Priority Level: {{ category.priority_level }}</p>
+                            <p class="visibility">Visibility: {{ category.visibility }}</p>
+                            <p class="shared">Shared: {{ 'Yes' if category.is_shared else 'No' }}</p>
+                            <p class="archived">Archived: {{ 'Yes' if category.archived else 'No' }}</p>
 
-        <!-- Modal for creating a new category -->
-        <div id="categoryModal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <span class="close-btn" id="closeModal">&times;</span>
-                <h2>Create New Category</h2>
-                <form id="categoryForm" method="POST" action="{{ url_for('main.add_category') }}">
-                    <label for="categoryName">Category Name:</label>
-                    <input type="text" id="categoryName" name="categoryName" required>
-                    
-                    <label for="categoryColor">Category Color:</label>
-                    <input type="color" id="categoryColor" name="categoryColor" value="#007bff">
-                    <button type="button" id="confirmColorBtn" class="btn">Confirm Color</button>
-                    
-                    <label for="categoryDescription">Category Description:</label>
-                    <textarea id="categoryDescription" name="categoryDescription" rows="3"></textarea>
-                    
-                    <button type="submit" class="btn">Create Category</button>
-                </form>
-            </div>
-        </div>
-        
-    <!-- Modal for editing a category -->
-    <div id="editCategoryModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close-btn" id="closeEditModal">&times;</span>
-            <h2>Edit Category</h2>
-            <form id="editCategoryForm" onsubmit="submitEditCategory(event)">
-                <input type="hidden" id="editCategoryId" name="categoryId">
-                <label for="editCategoryName">Category Name:</label>
-                <input type="text" id="editCategoryName" name="categoryName" required>
-                
-                <label for="editCategoryDescription">Category Description:</label>
-                <textarea id="editCategoryDescription" name="categoryDescription" rows="3"></textarea>
-    
-                <label for="editCategoryColor">Category Color:</label>
-                <input type="color" id="editCategoryColor" name="categoryColor">
-    
-                <button type="submit" class="btn">Save Changes</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Display flashed messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <ul>
-                {% for category, message in messages %}
-                    <li class="{{ category }}">{{ message }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
-    
-
-    <!-- Display all categories -->
-    <h2>Your Categories:</h2>
-    {% if categories %}
-        <ul>
-            {% for category in categories %}
-                <li>
-                    <strong>{{ category.name }}</strong>: {{ category.description or "No description" }}
-                    <br>
-                    <!-- Edit and delete buttons -->
-                    <a href="{{ url_for('main.edit_category', category_id=category.id) }}" class="btn">Edit</a>
-                    <form action="{{ url_for('main.delete_category', category_id=category.id) }}" method="POST" style="display:inline;">
-                        <button type="submit" class="btn btn-danger">Delete</button>
-                    </form>
-                    
-                    <!-- Display activity log for the category -->
-                    <h3>Activity Log:</h3>
-                    <ul>
-                        {% for activity in category.activity_logs %}
-                            <li>{{ activity.timestamp }} - {{ activity.description }}</li>
+                        
+                            <p>Top 5 Tasks:</p>
+                            <ul>
+                                {% for task in category.tasks[:5] %}
+                                    <li>{{ task.title }}</li>
+                                {% endfor %}
+                            </ul>
+                            <p>Tasks Completed: {{ category.completed_tasks }} / {{ category.task_count }}</p>
+                        
+                            <button class="add-task-btn" data-category-id="{{ category.id }}">Add Task</button>
+                            <button class="mark-all-btn" data-category-id="{{ category.id }}">Mark All as Completed</button>
+                        </div>                        
                         {% endfor %}
-                    </ul>
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>You have no categories yet.</p>
-    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
 
-</div>
-<!-- Scripts -->
-<script src="{{ url_for('static', filename='categories.js') }}"></script>
-{% endblock %}
+            <!-- Modal for adding a new category -->
+            <div id="categoryModal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <span class="close-btn" id="closeModal">&times;</span>
+                    <h2>Create New Category</h2>
+                    <form id="categoryForm" method="POST" action="{{ url_for('main.add_category') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <label for="categoryName">Category Name:</label>
+                        <input type="text" id="categoryName" name="categoryName" required>
+
+                        <label for="categoryDescription">Category Description:</label>
+                        <textarea id="categoryDescription" name="categoryDescription" rows="3"></textarea>
+
+                        <label for="categoryColor">Category Color:</label>
+                        <input type="color" id="categoryColor" name="categoryColor" value="#007bff">
+
+                        <label for="categoryPriority">Priority Level:</label>
+                        <select id="categoryPriority" name="priorityLevel">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                        </select>
+
+                        <label for="categoryVisibility">Visibility:</label>
+                        <select id="categoryVisibility" name="visibility">
+                            <option value="Public">Public</option>
+                            <option value="Private" selected>Private</option>
+                        </select>
+
+                        <label for="categoryShared">Share this Category?</label>
+                        <input type="checkbox" id="categoryShared" name="isShared">
+
+                        <label for="categoryIcon">Icon Path or Name:</label>
+                        <input type="text" id="categoryIcon" name="categoryIcon">
+
+                        <label for="categoryArchived">Archived?</label>
+                        <input type="checkbox" id="categoryArchived" name="archived">
+
+                        <button type="submit" class="btn">Create Category</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Button to add a new category -->
+            <div class="add-category-card" onclick="showCreateCategoryModal()">
+                <h2>+</h2>
+            </div>
+
+
+
+
+            <!-- Modal for editing a category -->
+            <div id="editCategoryModal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <span class="close-btn" id="closeEditModal">&times;</span>
+                    <h2>Edit Category</h2>
+                    <form id="editCategoryForm" onsubmit="submitEditCategory(event)" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+
+                        <input type="hidden" id="editCategoryId" name="categoryId">
+
+                        <label for="editCategoryName">Category Name:</label>
+                        <input type="text" id="editCategoryName" name="categoryName" required>
+
+                        <label for="editCategoryDescription">Category Description:</label>
+                        <textarea id="editCategoryDescription" name="categoryDescription" rows="3"></textarea>
+
+                        <label for="editCategoryColor">Category Color:</label>
+                        <input type="color" id="editCategoryColor" name="categoryColor">
+
+                        <label for="editCategoryPriority">Priority Level:</label>
+                        <select id="editCategoryPriority" name="priorityLevel">
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                        </select>
+
+                        <label for="editCategoryVisibility">Visibility:</label>
+                        <select id="editCategoryVisibility" name="visibility">
+                            <option value="Public">Public</option>
+                            <option value="Private">Private</option>
+                        </select>
+
+                        <label for="editCategoryShared">Share this Category?</label>
+                        <input type="checkbox" id="editCategoryShared" name="isShared">
+
+                        <label for="editCategoryIcon">Icon Path or Name:</label>
+                        <input type="text" id="editCategoryIcon" name="categoryIcon">
+
+                        <label for="editCategoryArchived">Archived?</label>
+                        <input type="checkbox" id="editCategoryArchived" name="archived">
+
+                        <button type="submit" class="btn">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Scripts -->
+            <script src="{{ url_for('static', filename='categories.js') }}"></script>
+        {% endblock %}
 </body>
 </html>
+

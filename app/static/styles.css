@@ -173,6 +173,51 @@
     margin-left: 250px; 
 }
 
+/* General Modal Styling */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 999; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0, 0, 0, 0.5); /* Black w/ opacity */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    display: flex; /* Flex for centering */
+}
+
+/* Modal Content Styling */
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Close Button */
+.close-btn {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-btn:hover,
+.close-btn:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+
 /* Category Card Styling */
 .category-card {
     width: var(--card-width);
@@ -253,6 +298,56 @@
 .category-card p {
     font-size: var(--tasks-done-font-size);
     margin: 5px 0;
+}
+
+/* Menu Icon Styling (Three Dots) */
+.menu-icon {
+    cursor: pointer;
+    position: absolute;
+    right: 15px; /* Positioned to the right */
+    top: 15px; /* Top alignment */
+    font-size: 20px;
+    color: #ffffff;
+    z-index: 2;
+}
+
+/* Menu Options */
+.menu-options {
+    position: absolute;
+    top: 45px; /* Positioned below the three dots */
+    right: 15px; /* Align with the menu icon */
+    background-color: #ffffff;
+    color: #333333;
+    border-radius: 8px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    z-index: 3; /* Higher than category-card */
+    display: none; /* Hidden by default */
+}
+
+/* Menu Item Styling */
+.menu-item {
+    padding: 5px 10px;
+}
+
+.menu-item a {
+    color: #333333;
+    text-decoration: none;
+}
+
+.menu-item a:hover {
+    color: var(--primary-color);
+}
+
+.menu-item button {
+    border: none;
+    background: none;
+    color: #333333;
+    cursor: pointer;
+}
+
+.menu-item button:hover {
+    color: #ff0000; /* Make delete button stand out on hover */
 }
 
 /* General Spacing Fixes for Tasks Section */

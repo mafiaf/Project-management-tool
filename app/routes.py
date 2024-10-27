@@ -1,12 +1,15 @@
 from flask import Flask, session, Blueprint, render_template, redirect, url_for, flash, request, session, redirect, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from .models import User, Task, db, TaskInvitation, task_user, Category, ActivityLog, Comment   #Model imports
+from .models import User, Task, db, TaskInvitation, task_user, Category, ActivityLog, Comment, category_user   #Model imports
 from .forms import RegistrationForm, LoginForm, TaskForm, ShareTaskForm, CommentForm, CategoryForm, CancelInvitationForm, UpdateProfileForm, ChangePasswordForm    # Import the forms
 from app.utils import login_required, role_required
 import logging  # Import logging for debugging
 from datetime import datetime, timedelta
 import calendar
 import json
+from flask_wtf.csrf import validate_csrf, CSRFError, validate_csrf
+from app.utils.utils import login_required, role_required
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,6 +42,10 @@ def register():
         # If no conflicts, create a new user
         user = User(email=form.email.data, username=form.username.data)
         user.set_password(form.password.data)
+
+        # Assign "Admin" role by default for newly registered users
+        user.role = 'ADMIN'  # Add this line to set the user as an ADMIN
+
         db.session.add(user)
         db.session.commit()
 
@@ -57,13 +64,19 @@ def login():
         user = User.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
             session['user_id'] = user.id
-            logger.info(f"User {user.email} logged in successfully")
+
+            # Assuming `user.role` is an object and has an attribute like `name` or `id`
+            session['user_role'] = user.role.name  # Save the role name (string)
+            
+            logger.info(f"User {user.email} logged in successfully with role {user.role.name}")
             flash('Login successful!', 'success')
             return redirect(url_for('main.dashboard'))
         else:
             logger.warning(f"Failed login attempt for email: {form.email.data}")
             flash('Login failed. Please check your email and password.', 'danger')
     return render_template('login.html', form=form)
+
+
 
 @main.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -356,7 +369,7 @@ def edit_task(task_id):
 
     # Ensure user has permission to edit
     role_query = db.session.query(task_user.c.role).filter(task_user.c.task_id == task.id, task_user.c.user_id == user_id).first()
-    if user_id != task.user_id and (role_query is None or role_query[0] not in ['Editor', 'Admin']):
+    if user_id != task.user_id and (role_query is None or role_query[0] not in ['EDITOR', 'ADMIN']):
         flash('You do not have permission to edit this task.', 'danger')
         return redirect(url_for('main.dashboard'))
 
@@ -406,7 +419,7 @@ def edit_task(task_id):
 
 @main.route('/delete_task/<int:task_id>', methods=['POST'])
 @login_required
-@role_required('Admin', 'Owner')
+@role_required('ADMIN', 'OWNER', context='task', context_id=lambda **kwargs: kwargs.get('task_id'))
 def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
 
@@ -595,7 +608,7 @@ def mark_task_done(task_id):
     task_user_entry = db.session.query(task_user).filter_by(task_id=task.id, user_id=user_id).first()
 
     # Update permission check to allow the task owner or Editor/Admin role
-    if task.user_id != user_id and (not task_user_entry or task_user_entry.role not in ['Editor', 'Admin']):
+    if task.user_id != user_id and (not task_user_entry or task_user_entry.role not in ['EDITOR', 'ADMIN']):
         flash("You don't have permission to mark this task as done.", 'danger')
         return redirect(url_for('main.view_task', task_id=task_id))
 
@@ -614,7 +627,7 @@ def manage_task_users(task_id):
 
     # Ensure that the user has permission to manage the task
     task_user_entry = db.session.query(task_user).filter_by(task_id=task.id, user_id=user_id).first()
-    if not task_user_entry or task_user_entry.role not in ['Owner', 'Admin']:
+    if not task_user_entry or task_user_entry.role not in ['OWNER', 'ADMIN']:
         flash("You do not have permission to manage users for this task.", 'danger')
         return redirect(url_for('main.dashboard'))
 
@@ -786,61 +799,56 @@ def view_category(category_id):
     return render_template('view_category.html', category=category, tasks=tasks)
 
 
-@main.route('/edit_category/<int:category_id>', methods=['POST'])
+@main.route('/edit_category/<int:category_id>', methods=['GET', 'POST'])
 @login_required
-@role_required('Admin', 'Owner')
+@role_required('ADMIN', 'OWNER', context='category', context_id=lambda **kwargs: kwargs.get('category_id'))
 def edit_category(category_id):
-    try:
-        category = Category.query.get_or_404(category_id)
-        user_id = session.get('user_id')
+    category = Category.query.get_or_404(category_id)
+    user_id = session.get('user_id')
 
-        # Get data from JSON request
+    # Check if the logged-in user has access rights to this category
+    user_role = db.session.query(category_user.c.role).filter_by(category_id=category_id, user_id=user_id).first()
+    if not user_role or user_role[0] not in ['ADMIN', 'OWNER']:
+        return jsonify({"success": False, "error": "You do not have permission to edit this category."}), 403
+
+    if request.method == 'POST' and request.is_json:
+        try:
+            csrf_token = request.headers.get("X-CSRFToken")
+            validate_csrf(csrf_token)
+        except CSRFError:
+            return jsonify({"success": False, "error": "Invalid CSRF token"}), 400
+
         data = request.get_json()
         if not data:
-            return jsonify({'error': 'Invalid request data.'}), 400
+            return jsonify({"success": False, "error": "No data provided"}), 400
 
-        # Update category fields with the data from the request
-        name = data.get('categoryName')
-        description = data.get('categoryDescription')
-        color = data.get('categoryColor')
-
-        if not name or not color:
-            return jsonify({'error': 'Name and color fields are required.'}), 400
-
-        # Track changes for logging purposes
-        changes = []
-        if category.name != name:
-            changes.append(f"Category name changed from '{category.name}' to '{name}'")
-        if category.description != description:
-            changes.append(f"Category description changed from '{category.description}' to '{description}'")
-        if category.color != color:
-            changes.append(f"Category color changed from '{category.color}' to '{color}'")
-
-        # Update category
-        category.name = name
-        category.description = description
-        category.color = color
-
-        # Commit changes to the database
-        db.session.commit()
-
-        # Log each change
-        for change in changes:
-            activity = ActivityLog(
-                description=change,
-                user_id=user_id,
-                category_id=category.id
-            )
-            db.session.add(activity)
+        # Update category fields with JSON data
+        category.name = data.get('name', category.name)
+        category.description = data.get('description', category.description)
+        category.color = data.get('color', category.color)
+        category.priority_level = data.get('priority_level', category.priority_level)
+        category.visibility = data.get('visibility', category.visibility)
+        category.is_shared = data.get('is_shared', category.is_shared)
+        category.icon = data.get('icon', category.icon)
+        category.archived = data.get('archived', category.archived)
+        category.updated_at = datetime.utcnow()
 
         db.session.commit()
 
-        return jsonify({'success': 'Category updated successfully.'}), 200
+        # Log changes
+        activity = ActivityLog(
+            description=f"Category '{category.name}' updated by user {user_id}",
+            user_id=user_id,
+            category_id=category.id
+        )
+        db.session.add(activity)
+        db.session.commit()
 
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error occurred: {e}")  # Print the error for debugging
-        return jsonify({'error': 'An error occurred while updating the category.'}), 500
+        return jsonify({"success": True, "message": "Category updated successfully"}), 200
+
+    return jsonify({"success": False, "error": "Invalid request format"}), 400
+
+
 
 
 @main.route('/delete_category/<int:category_id>', methods=['POST'])
@@ -852,29 +860,24 @@ def delete_category(category_id):
 
         # Ensure the user has permission to delete the category
         if category.user_id != user_id:
-            return jsonify({'error': 'You do not have permission to delete this category.'}), 403
+            flash('You do not have permission to delete this category.', 'danger')
+            return redirect(url_for('main.dashboard'))
+
+        category_name = category.name
 
         # Delete the category
         db.session.delete(category)
         db.session.commit()
 
-        # Log activity for deleting a category
-        activity = ActivityLog(
-            description=f"Category '{category.name}' deleted by user {user_id}",
-            user_id=user_id,
-            category_id=category.id
-        )
-        db.session.add(activity)
-        db.session.commit()
-
-        return jsonify({'success': 'Category deleted successfully.'}), 200
+        # Flash a success message
+        flash(f"Category '{category_name}' deleted successfully.", 'success')
+        return redirect(url_for('main.dashboard'))
 
     except Exception as e:
         db.session.rollback()
         print(f"Error occurred while deleting category: {e}")
-        return jsonify({'error': 'An error occurred while deleting the category.'}), 500
-
-
+        flash('An error occurred while deleting the category.', 'danger')
+        return redirect(url_for('main.dashboard'))
 
 
 
@@ -883,31 +886,47 @@ def delete_category(category_id):
 def add_category():
     user_id = session.get('user_id')
     category_name = request.form.get('categoryName')
-    category_color = request.form.get('categoryColor', '#007bff') 
+    category_color = request.form.get('categoryColor', '#007bff')
     category_description = request.form.get('categoryDescription', '')
+    priority_level = request.form.get('priorityLevel', 'Medium')
+    visibility = request.form.get('visibility', 'Private')
+    is_shared = bool(request.form.get('isShared'))
+    icon = request.form.get('categoryIcon', '')
+    archived = bool(request.form.get('archived'))
 
     if category_name:
-        # Create the new category and assign the user as the owner
+        # Create the new category
         new_category = Category(
             name=category_name,
             color=category_color,
             description=category_description,
-            user_id=user_id
+            user_id=user_id,
+            priority_level=priority_level,
+            visibility=visibility,
+            is_shared=is_shared,
+            icon=icon,
+            archived=archived
         )
         db.session.add(new_category)
+        db.session.commit()
+
+        # Assign "Admin" role to the user for this category
+        stmt = category_user.insert().values(category_id=new_category.id, user_id=user_id, role='ADMIN')
+        db.session.execute(stmt)
         db.session.commit()
 
         flash(f"Category '{category_name}' has been successfully created.", "success")
     else:
         flash("Category name is required.", "error")
 
-    return redirect(url_for('main.dashboard'))
+    return redirect(url_for('main.categories'))
+
 
 
 
 @main.route('/mark_all_completed/<int:category_id>', methods=['POST'])
 @login_required
-@role_required('Admin', 'Owner')
+@role_required('ADMIN', 'OWNER', context='category', context_id=lambda **kwargs: kwargs.get('category_id'))
 def mark_all_completed(category_id):
     """Route to mark all tasks in a category as completed"""
     # Retrieve the category
