@@ -10,29 +10,33 @@
     {% extends "base.html" %}
     {% block content %}
         <h1>Pending Invitations</h1>
-    
+
         <!-- Invitations Received -->
         <h2>Invitations Received</h2>
-        {% if invitations_received %}
-            {% for invitation in invitations_received %}
-                <div class="invitation-card">
-                    <p><strong>Task:</strong> {{ invitation.task.title }} (Role: {{ invitation.role }})</p>
-                    <div class="invitation-buttons">
-                        <form action="{{ url_for('main.accept_invitation', invitation_id=invitation.id) }}" method="POST" style="display: inline;">
-                            {{ form.hidden_tag() }}
-                            <button type="submit" class="btn btn-success">Accept</button>
-                        </form>
-                        <form action="{{ url_for('main.decline_invitation', invitation_id=invitation.id) }}" method="POST" style="display: inline;">
-                            {{ form.hidden_tag() }}
-                            <button type="submit" class="btn btn-danger">Decline</button>
-                        </form>
+        <div class="invitation-container">
+            {% if invitations_received %}
+                {% for invitation in invitations_received %}
+                    <div class="invitation-card">
+                        <p><strong>Task:</strong> {{ invitation.task.title }} (Role: {{ invitation.role }})</p>
+                        <p><strong>Sent By:</strong> {{ invitation.inviter.username }}</p>
+                        <p><strong>Date Sent:</strong> {{ invitation.date_sent.strftime('%B %d, %Y') }}</p>
+                        <div class="invitation-buttons">
+                            <form action="{{ url_for('main.accept_invitation', invitation_id=invitation.id) }}" method="POST" style="display: inline;">
+                                {{ form.hidden_tag() }}
+                                <button type="submit" class="btn btn-success">Accept</button>
+                            </form>
+                            <form action="{{ url_for('main.decline_invitation', invitation_id=invitation.id) }}" method="POST" style="display: inline;">
+                                {{ form.hidden_tag() }}
+                                <button type="submit" class="btn btn-danger">Decline</button>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <p>You have no pending invitations.</p>
-        {% endif %}
-    
+                {% endfor %}
+            {% else %}
+                <p>You have no pending invitations.</p>
+            {% endif %}
+        </div>
+
         <!-- Invitations Sent -->
         <h2>Invitations Sent</h2>
         <div class="invitation-container">
@@ -40,7 +44,9 @@
                 {% for invitation in invitations_sent %}
                     <div class="invitation-card">
                         <p><strong>Task:</strong> {{ invitation.task.title }} (Role: {{ invitation.role }})</p>
-                        <p><strong>Status:</strong> Pending</p>
+                        <p><strong>Sent By:</strong> {{ invitation.inviter.username }}</p>
+                        <p><strong>Date Sent:</strong> {{ invitation.date_sent.strftime('%B %d, %Y') }}</p>
+                        <p><strong>Status:</strong> <span class="status pending">Pending</span></p>
                         <form action="{{ url_for('main.cancel_invitation', invitation_id=invitation.id) }}" method="POST" style="display: inline;">
                             {{ form.hidden_tag() }}
                             <button type="submit" class="btn btn-danger">Cancel Invitation</button>

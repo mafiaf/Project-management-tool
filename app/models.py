@@ -44,11 +44,13 @@ class TaskInvitation(db.Model):
     invitee_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     role = db.Column(db.String(50), nullable=False)
     status = db.Column(db.String(20), nullable=False, default='Pending')  # "Pending", "Accepted", "Declined"
+    date_sent = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
+    # Relationships
     task = db.relationship('Task', backref='invitations')
     inviter = db.relationship('User', foreign_keys=[inviter_id])
     invitee = db.relationship('User', foreign_keys=[invitee_id])
-
+    
 class Comment(db.Model): 
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
