@@ -1,47 +1,176 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
 </head>
+
 <body>
-    <div class="container">
-        <h2>Login</h2>
-
-        <!-- Display flash messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class="flashes">
-                    {% for category, message in messages %}
-                        <li class="{{ category }}">{{ message }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
-
-        <form method="POST" action="{{ url_for('main.login') }}">
-            {{ form.hidden_tag() }}  <!-- Include CSRF protection -->
-            <div class="form-group">
-                {{ form.email.label }}  <!-- Render label -->
-                {{ form.email(class="form-control", required=True) }}  <!-- Render email input -->
-                {% for error in form.email.errors %}
-                    <span class="error">{{ error }}</span>  <!-- Display errors for email -->
-                {% endfor %}
+    <div class="overlay">
+        <div class="login-box">
+            <h2>Welcome to Task Manager</h2>
+            <div id="buttons-container">
+                <button id="new-user-button" onclick="showRegistrationForm()">New User</button>
+                <button id="existing-user-button" onclick="showLoginForm()">Existing User</button>
             </div>
-            <div class="form-group">
-                {{ form.password.label }}  <!-- Render label -->
-                {{ form.password(class="form-control", required=True) }}  <!-- Render password input -->
-                {% for error in form.password.errors %}
-                    <span class="error">{{ error }}</span>  <!-- Display errors for password -->
-                {% endfor %}
-            </div>
+            
+<!-- Login Form -->
+<div id="login-form-container" class="login-form" style="display: none;">
+    <form method="POST" action="{{ url_for('main.login') }}" onsubmit="loginUser(event)">
+        {{ login_form.hidden_tag() }}
+        <div class="form-group">
+            {{ login_form.email.label }}
+            {{ login_form.email(class="form-control", required=True, id="login-email") }}
+            {% for error in login_form.email.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+        <div class="form-group">
+            {{ login_form.password.label }}
+            {{ login_form.password(class="form-control", required=True, id="login-password") }}
+            {% for error in login_form.password.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+        <div id="login-errors" class="error-message" style="display: none; color: red;"></div>
+        <div class="form-actions">
             <button type="submit">Login</button>
-        </form>
+            <button type="button" onclick="showButtons()">Cancel</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function loginUser(event) {
+        event.preventDefault();
+        const form = event.target;
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form)
+        }).then(response => response.json()).then(data => {
+            if (data.success) {
+                window.location.href = data.redirect_url;
+            } else {
+                // Display errors if login fails
+                const errorContainer = document.getElementById("login-errors");
+                errorContainer.innerHTML = data.message; // Display the error message
+                errorContainer.style.display = "block";
+            }
+        }).catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        });
+    }
+</script>
+
+
+<!-- Registration Form -->
+<div id="registration-form-container" class="login-form" style="display: none;">
+    <form method="POST" action="{{ url_for('main.register') }}" onsubmit="registerUser(event)">
+        {{ registration_form.hidden_tag() }}
+        <div class="form-group">
+            {{ registration_form.username.label }}
+            {{ registration_form.username(class="form-control", required=True, id="register-username") }}
+            {% for error in registration_form.username.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+        <div class="form-group">
+            {{ registration_form.email.label }}
+            {{ registration_form.email(class="form-control", required=True, id="register-email") }}
+            {% for error in registration_form.email.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+        <div class="form-group">
+            {{ registration_form.password.label }}
+            {{ registration_form.password(class="form-control", required=True, id="register-password") }}
+            {% for error in registration_form.password.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+        <div class="form-group">
+            {{ registration_form.confirm_password.label }}
+            {{ registration_form.confirm_password(class="form-control", required=True, id="register-confirm-password") }}
+            {% for error in registration_form.confirm_password.errors %}
+                <span class="error">{{ error }}</span>
+            {% endfor %}
+        </div>
+        <div id="registration-errors" class="error-message" style="display: none; color: red;"></div>
+        <div class="form-actions">
+            <button type="submit">Register</button>
+            <button type="button" onclick="showButtons()">Cancel</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function registerUser(event) {
+        event.preventDefault();
+        const form = event.target;
         
-        <a href="{{ url_for('main.home') }}">Back to Home</a> 
-        <p>Don't have an account? <a href="{{ url_for('main.register') }}">Register here</a></p>
-    </div>
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form)
+        }).then(response => response.json()).then(data => {
+            if (data.success) {
+                // Display success message and switch to the login form
+                const successContainer = document.getElementById("login-errors");
+                successContainer.innerHTML = "Registration successful! You can now log in.";
+                successContainer.style.color = "green";
+                successContainer.style.display = "block";
+                showLoginForm();
+            } else {
+                // Display error messages if registration fails
+                const errorContainer = document.getElementById("registration-errors");
+                errorContainer.innerHTML = data.message; // Display the error message
+                errorContainer.style.display = "block";
+            }
+        }).catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        });
+    }
+</script>
+
+<!-- Add a div for displaying login errors -->
+<div id="login-errors" class="error-message" style="display: none; color: red;"></div>
+
+<script>
+    function validateRegistrationForm(event) {
+        const password = document.getElementById("register-password").value;
+        const confirmPassword = document.getElementById("register-confirm-password").value;
+
+        if (password !== confirmPassword) {
+            event.preventDefault(); // Stop form submission
+            document.getElementById("password-match-error").textContent = "Passwords do not match.";
+            return false;
+        }
+        return true;
+    }
+</script> 
+
+    <script>
+        function showLoginForm() {
+            document.getElementById("login-form-container").style.display = "block";
+            document.getElementById("registration-form-container").style.display = "none";
+            document.getElementById("buttons-container").style.display = "none";
+        }
+
+        function showRegistrationForm() {
+            document.getElementById("registration-form-container").style.display = "block";
+            document.getElementById("login-form-container").style.display = "none";
+            document.getElementById("buttons-container").style.display = "none";
+        }
+
+        function showButtons() {
+            document.getElementById("login-form-container").style.display = "none";
+            document.getElementById("registration-form-container").style.display = "none";
+            document.getElementById("buttons-container").style.display = "block";
+        }
+    </script>
 </body>
 </html>

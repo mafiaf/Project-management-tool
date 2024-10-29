@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // Handle icon container click
     const iconContainers = document.querySelectorAll('.icon-container');
     iconContainers.forEach(container => {
         container.addEventListener('click', function () {
@@ -9,24 +10,41 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    const openCategoryModal = document.getElementById('openCategoryModalButton');
+    if (openCategoryModal) {
+        openCategoryModal.addEventListener('click', function (event) {
+            openEditCategoryModal(event, openCategoryModal.getAttribute('data-category-id'));
+        });
+    }
+
+    const editCategoryForm = document.getElementById('editCategoryForm');
+    if (editCategoryForm) {
+        editCategoryForm.addEventListener('submit', submitEditCategory);
+        console.log("Edit category form event listener attached.");
+    } else {
+        console.error("Edit category form not found during DOMContentLoaded.");
+    }
+
     // Handle category card click to navigate to the category page
     const categoryCards = document.querySelectorAll('.category-card');
     categoryCards.forEach(card => {
-        card.addEventListener('click', function () {
-            const categoryId = card.getAttribute('data-category-id');
-            const url = `/category/${categoryId}`;
-            window.location.href = url;
-        });
+        if (!card.classList.contains('add-category-card')) {
+            card.addEventListener('click', function () {
+                const categoryId = card.getAttribute('data-category-id');
+                if (categoryId) {
+                    window.location.href = `/category/${categoryId}`;
+                }
+            });
+        }
     });
-
+    
     // Handle add task button click
     const addTaskButtons = document.querySelectorAll('.add-task-btn');
     addTaskButtons.forEach(button => {
         button.addEventListener('click', function (event) {
             event.stopPropagation(); // Prevent click event from propagating to the card
             const categoryId = button.getAttribute('data-category-id');
-            const url = `/add_task?category_id=${categoryId}`;
-            window.location.href = url;
+            window.location.href = `/add_task?category_id=${categoryId}`;
         });
     });
 
@@ -36,8 +54,7 @@ document.addEventListener('DOMContentLoaded', function () {
         button.addEventListener('click', function (event) {
             event.stopPropagation(); // Prevent click event from propagating to the card
             const categoryId = button.getAttribute('data-category-id');
-            const url = `/mark_all_completed/${categoryId}`;
-            window.location.href = url;
+            window.location.href = `/mark_all_completed/${categoryId}`;
         });
     });
 
@@ -46,58 +63,301 @@ document.addEventListener('DOMContentLoaded', function () {
     menuIcons.forEach(icon => {
         icon.addEventListener('click', function (event) {
             event.stopPropagation();
-            // Close all open menus
             document.querySelectorAll('.menu-options').forEach(menu => menu.style.display = 'none');
-            // Toggle the specific menu
-            const categoryId = icon.getAttribute('onclick').match(/'([^']+)'/)[1];
-            toggleMenu(categoryId);
+            const categoryId = icon.getAttribute('data-category-id');
+            if (categoryId) {
+                toggleMenu(categoryId);
+            }
         });
     });
 
     // Close all menus when clicking outside
-    document.addEventListener('click', function () {
-        document.querySelectorAll('.menu-options').forEach(menu => {
-            menu.style.display = 'none';
-        });
+    document.addEventListener('click', function (event) {
+        const clickedElement = event.target;
+        if (!clickedElement.classList.contains('menu-icon')) {
+            document.querySelectorAll('.menu-options').forEach(menu => {
+                menu.style.display = 'none';
+            });
+        }
     });
 
     // Handle "Add Category" button click (big plus button)
-    document.querySelector('.add-category-card').onclick = function () {
-        document.getElementById('categoryModal').style.display = 'block';
-    };
+    const addCategoryCard = document.getElementById('addCategoryCard');
+    if (addCategoryCard) {
+        addCategoryCard.addEventListener('click', function () {
+            console.log('Add Category card clicked!'); // Debugging log
+            const categoryModal = document.getElementById('categoryModal');
+            if (categoryModal) {
+                categoryModal.style.display = 'block';
+            }
+        });
+    }
 
     // Close "Create New Category" modal
-    document.getElementById('closeModal').onclick = function () {
-        document.getElementById('categoryModal').style.display = 'none';
-    };
+    const closeModalBtn = document.getElementById('closeModal');
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', function () {
+            const categoryModal = document.getElementById('categoryModal');
+            if (categoryModal) {
+                categoryModal.style.display = 'none';
+            }
+        });
+    }
 
     // Close "Edit Category" modal event
-    document.getElementById('closeEditModal').onclick = function () {
-        document.getElementById('editCategoryModal').style.display = 'none';
-    };
+    const closeEditModalBtn = document.getElementById('closeEditModal');
+    if (closeEditModalBtn) {
+        closeEditModalBtn.addEventListener('click', function () {
+            const editCategoryModal = document.getElementById('editCategoryModal');
+            if (editCategoryModal) {
+                editCategoryModal.style.display = 'none';
+            }
+        });
+    }
 
-    // Close modals if user clicks outside of them
-    window.onclick = function (event) {
-        if (event.target === document.getElementById('categoryModal')) {
-            document.getElementById('categoryModal').style.display = 'none';
+    document.addEventListener('DOMContentLoaded', function () {
+        // Handle "Create New Category" form submission
+        const createCategoryForm = document.getElementById('createCategoryForm');
+        if (createCategoryForm) {
+            createCategoryForm.addEventListener('submit', function (event) {
+                event.preventDefault(); // Prevent default form submission
+    
+                const formData = new FormData(createCategoryForm);
+                const data = Object.fromEntries(formData.entries());
+                console.log('Form data being submitted:', data);
+    
+                // Use fetch to submit the form data via AJAX
+                fetch(createCategoryForm.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRFToken': formData.get('csrf_token')
+                    },
+                    body: JSON.stringify(data)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(data => {
+                                throw new Error(data.error || 'Failed to add category');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message || 'Category created successfully.');
+                            // Hide the modal after success
+                            const categoryModal = document.getElementById('categoryModal');
+                            if (categoryModal) {
+                                categoryModal.style.display = 'none';
+                            }
+                            window.location.reload(); // Refresh the page to show the new category
+                        } else {
+                            alert(data.error || 'Failed to add category');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to create category. Please try again.');
+                    });
+            });
         }
-        if (event.target === document.getElementById('editCategoryModal')) {
-            document.getElementById('editCategoryModal').style.display = 'none';
+    });    
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Handle "Edit Category" form submission (modal version)
+        const editCategoryForm = document.getElementById('editCategoryForm');
+        if (editCategoryForm) {
+            editCategoryForm.addEventListener('submit', function (event) {
+                event.preventDefault(); // Prevent default form submission
+
+                const formData = new FormData(editCategoryForm);
+                const data = Object.fromEntries(formData.entries());
+
+                // Log the data to debug
+                console.log("Data being sent:", data);
+
+                // Get the category ID to construct the URL
+                const categoryId = data.categoryId;
+
+                // Use fetch to submit the form data via AJAX
+                fetch(`/edit_category/${categoryId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRFToken': data.csrf_token // Pass the CSRF token in the headers
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            console.error("Error response data:", data);
+                            throw new Error(data.error || 'Failed to edit category');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message || 'Category updated successfully.');
+                        // Optionally, hide the modal or reload the page after success
+                        const editCategoryModal = document.getElementById('editCategoryModal');
+                        if (editCategoryModal) {
+                            editCategoryModal.style.display = 'none';
+                        }
+                        window.location.reload(); // Reload to see updated category
+                    } else {
+                        alert(data.error || 'Failed to edit category');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error occurred during fetch:', error);
+                    alert('Failed to update category. Please try again.');
+                });
+            });
+        } else {
+            console.error("Edit category form not found in the DOM");
+        }
+    });
+    
+    
+    function submitEditCategory(event) {
+        event.preventDefault(); // Prevent the default form submission behavior
+    
+        console.log("submitEditCategory function is called.");
+    
+        const editCategoryForm = document.getElementById('editCategoryForm');
+        if (!editCategoryForm) {
+            console.error("Edit category form not found.");
+            return;
+        }
+    
+        const formData = new FormData(editCategoryForm);
+        const data = Object.fromEntries(formData.entries());
+    
+        // Log data to verify the values
+        console.log("Form data being prepared for submission:", data);
+    
+        const categoryId = data.categoryId;
+    
+        fetch(`/edit_category/${categoryId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRFToken': data.csrf_token
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            console.log("Response received from server:", response);
+    
+            if (!response.ok) {
+                return response.json().then(data => {
+                    console.error("Error response data:", data);
+                    throw new Error(data.error || 'Failed to edit category');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Server response JSON:", data);
+    
+            if (data.success) {
+                alert(data.message || 'Category updated successfully.');
+                document.getElementById('editCategoryModal').style.display = 'none';
+                window.location.reload(); // Reload to see the updated category
+            } else {
+                alert(data.error || 'Failed to edit category');
+            }
+        })
+        .catch(error => {
+            console.error('Error occurred during fetch:', error);
+            alert('Failed to update category. Please try again.');
+        });
+    }
+    
+    
+
+
+// Function to toggle menu visibility
+function toggleMenu(categoryId) {
+    const menu = document.getElementById(`menu-${categoryId}`);
+    if (menu) {
+        menu.style.display = (menu.style.display === 'none' || menu.style.display === '') ? 'block' : 'none';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    console.log("DOM fully loaded and parsed.");
+    const editCategoryBtn = document.getElementById('editCategoryBtn');
+    
+    if (editCategoryBtn) {
+        editCategoryBtn.addEventListener('click', function (event) {
+            const categoryId = event.target.getAttribute('data-category-id');
+            openEditCategoryModal(event, categoryId);
+        });
+    }
+    
+
+
+    // Close modal functionality
+    document.getElementById('closeEditModal').addEventListener('click', function () {
+        document.getElementById('editCategoryModal').style.display = 'none';
+    });
+
+    window.onclick = function (event) {
+        const editCategoryModal = document.getElementById('editCategoryModal');
+        if (event.target === editCategoryModal) {
+            editCategoryModal.style.display = 'none';
         }
     };
 });
 
-function toggleMenu(categoryId) {
-    const menu = document.getElementById(`menu-${categoryId}`);
-    menu.style.display = (menu.style.display === 'none' || menu.style.display === '') ? 'block' : 'none';
-}
+document.addEventListener('DOMContentLoaded', function () {
+    console.log("DOM fully loaded and parsed.");
+
+    const editCategoryButtons = document.querySelectorAll('.edit-category-btn');
+    console.log("Number of Edit Category Buttons Found:", editCategoryButtons.length); 
+
+    editCategoryButtons.forEach(button => {
+        button.addEventListener('click', function (event) {
+            const categoryId = button.getAttribute('data-category-id');
+            console.log("Clicked on Edit Category Button for ID:", categoryId);
+            openEditCategoryModal(event, categoryId);
+        });
+    });
+
+    // Close modal functionality
+    const closeEditModalButton = document.getElementById('closeEditModal');
+    if (closeEditModalButton) {
+        console.log("Close Edit Modal Button Found");
+        closeEditModalButton.addEventListener('click', function () {
+            document.getElementById('editCategoryModal').style.display = 'none';
+        });
+    } else {
+        console.error("Close Edit Modal button not found");
+    }
+
+    window.onclick = function (event) {
+        const editCategoryModal = document.getElementById('editCategoryModal');
+        if (event.target === editCategoryModal) {
+            console.log("Clicked outside modal, closing modal");
+            editCategoryModal.style.display = 'none';
+        }
+    };
+});
+
 
 function openEditCategoryModal(event, categoryId) {
     event.stopPropagation(); // Prevent click event propagation
 
     console.log("Opening Edit Modal for Category ID:", categoryId);
 
-    // Get the category card based on the categoryId
+    // Get the category card element using the data-category-id attribute
     const categoryCard = document.querySelector(`[data-category-id="${categoryId}"]`);
 
     if (!categoryCard) {
@@ -105,227 +365,55 @@ function openEditCategoryModal(event, categoryId) {
         return;
     }
 
-    // Populate the form fields
+    console.log("Category card found. Populating modal form fields...");
+
+    // Populate the form fields using the data attributes directly from the category card
     document.getElementById('editCategoryId').value = categoryId;
 
     // Set category name
-    const nameElement = categoryCard.querySelector('h3');
-    if (nameElement) {
-        document.getElementById('editCategoryName').value = nameElement.textContent.trim();
-    } else {
-        console.error("Category name element not found for categoryId:", categoryId);
-    }
+    const categoryName = categoryCard.getAttribute('data-category-name') || '';
+    document.getElementById('editCategoryName').value = categoryName;
 
-    // Set category color (Ensure you parse RGB to hex if necessary)
-    const rgbColor = window.getComputedStyle(categoryCard).backgroundColor;
-    document.getElementById('editCategoryColor').value = rgbToHex(rgbColor);
+    // Set category description
+    const categoryDescription = categoryCard.getAttribute('data-category-description') || '';
+    document.getElementById('editCategoryDescription').value = categoryDescription;
 
-    // Set the description if available
-    const descriptionElement = categoryCard.querySelector('.category-description');
-    if (descriptionElement) {
-        document.getElementById('editCategoryDescription').value = descriptionElement.textContent.trim();
-    } else {
-        console.warn("No description element found for categoryId:", categoryId);
-    }
+    // Set category color
+    const categoryColor = categoryCard.getAttribute('data-category-color') || '#000000';
+    document.getElementById('editCategoryColor').value = categoryColor;
 
     // Set priority level
-    const priorityElement = categoryCard.querySelector('p.priority-level');
-    const prioritySelect = document.getElementById('editCategoryPriority');
-    if (priorityElement) {
-        prioritySelect.value = priorityElement.textContent.split(": ")[1].trim();
-    } else {
-        prioritySelect.value = "Medium"; // Default value
-    }
+    const priorityLevel = categoryCard.getAttribute('data-category-priority-level') || 'Medium';
+    document.getElementById('editCategoryPriority').value = priorityLevel;
 
     // Set visibility
-    const visibilityElement = categoryCard.querySelector('p.visibility');
-    const visibilitySelect = document.getElementById('editCategoryVisibility');
-    if (visibilityElement) {
-        visibilitySelect.value = visibilityElement.textContent.split(": ")[1].trim();
-    } else {
-        visibilitySelect.value = "Private"; // Default value
-    }
+    const visibility = categoryCard.getAttribute('data-category-visibility') || 'Private';
+    document.getElementById('editCategoryVisibility').value = visibility;
 
     // Set shared checkbox
-    const sharedElement = categoryCard.querySelector('p.shared');
-    const sharedCheckbox = document.getElementById('editCategoryShared');
-    sharedCheckbox.checked = sharedElement && sharedElement.textContent.split(": ")[1].trim() === "Yes";
-
-    // Set icon value (Assuming there's an attribute 'data-icon' on the card element)
-    const iconValue = categoryCard.getAttribute('data-icon');
-    document.getElementById('editCategoryIcon').value = iconValue || "";
+    const isShared = categoryCard.getAttribute('data-category-shared') === 'Yes';
+    document.getElementById('editCategoryShared').checked = isShared;
 
     // Set archived checkbox
-    const archivedElement = categoryCard.querySelector('p.archived');
-    const archivedCheckbox = document.getElementById('editCategoryArchived');
-    archivedCheckbox.checked = archivedElement && archivedElement.textContent.split(": ")[1].trim() === "Yes";
+    const isArchived = categoryCard.getAttribute('data-category-archived') === 'Yes';
+    document.getElementById('editCategoryArchived').checked = isArchived;
+
+    // Set icon value
+    const categoryIcon = categoryCard.getAttribute('data-category-icon') || '';
+    document.getElementById('editCategoryIcon').value = categoryIcon;
+
+    console.log("Modal fields populated. Displaying modal...");
 
     // Show the edit category modal
     document.getElementById('editCategoryModal').style.display = 'block';
 }
 
-// Helper function to convert RGB to HEX color format
+// Helper function to convert RGB to HEX color format (for later use if necessary)
 function rgbToHex(rgb) {
     const rgbArray = rgb.match(/\d+/g);
     if (!rgbArray) {
-        return "#000000"; // Fallback color if RGB is not found
+        return "#000000";
     }
     return `#${((1 << 24) + (+rgbArray[0] << 16) + (+rgbArray[1] << 8) + +rgbArray[2]).toString(16).slice(1)}`;
 }
-
-
-function deleteCategory(event, categoryId) {
-    event.stopPropagation(); // Prevent click event from propagating to other elements
-
-    if (confirm('Are you sure you want to delete this category?')) {
-        // Send a POST request with a delete flag using fetch
-        fetch(`/delete_category/${categoryId}`, {
-            method: 'POST',  // Use POST instead of DELETE
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ delete: true })  // Optional: send additional info to confirm delete
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();  // Parse response as JSON if successful
-            } else {
-                return response.text().then(text => { throw new Error(text); });
-            }
-        })
-        .then(data => {
-            if (data.success) {
-                window.location.reload(); // Refresh the page after successful deletion
-            } else {
-                alert(data.error || 'Failed to delete category.');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Failed to delete category. Please try again.');
-        });
-    }
-}
-
-
-
-
-document.addEventListener("DOMContentLoaded", function() {
-    // Open modal on button click
-    document.querySelector(".add-category-card").onclick = function() {
-        document.getElementById("categoryModal").style.display = "block";
-    };
-
-    // Close modal event
-    document.getElementById("closeModal").onclick = function() {
-        document.getElementById("categoryModal").style.display = "none";
-    };
-
-    // Close modal if user clicks outside of it
-    window.onclick = function(event) {
-        if (event.target == document.getElementById("categoryModal")) {
-            document.getElementById("categoryModal").style.display = "none";
-        }
-    };
-
-    // Close edit modal event
-    document.getElementById("closeEditModal").onclick = function() {
-        document.getElementById("editCategoryModal").style.display = "none";
-    };
-
-    // Close edit modal if user clicks outside of it
-    window.onclick = function(event) {
-        if (event.target == document.getElementById("editCategoryModal")) {
-            document.getElementById("editCategoryModal").style.display = "none";
-        }
-    };
-});
-
-// Confirm color selection
-document.addEventListener("DOMContentLoaded", function() {
-    const colorInput = document.getElementById("categoryColor");
-
-    if (colorInput) {
-        colorInput.addEventListener("input", function() {
-            colorInput.style.backgroundColor = colorInput.value;
-        });
-    } else {
-        console.warn('Element with ID "categoryColor" not found.');
-    }
-});
-
-
-function submitEditCategory(event) {
-    event.preventDefault(); // Prevent the default form submission
-
-    const categoryId = document.getElementById('editCategoryId').value;
-    const categoryName = document.getElementById('editCategoryName').value;
-    const categoryDescription = document.getElementById('editCategoryDescription').value;
-    const categoryColor = document.getElementById('editCategoryColor').value;
-    const priorityLevel = document.getElementById('editCategoryPriority').value;
-    const visibility = document.getElementById('editCategoryVisibility').value;
-    const isShared = document.getElementById('editCategoryShared').checked;
-    const categoryIcon = document.getElementById('editCategoryIcon').value;
-    const archived = document.getElementById('editCategoryArchived').checked;
-
-    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
-    console.log("CSRF Token:", csrfToken);  // Log the CSRF token to verify it's correct
-
-    fetch(`/edit_category/${categoryId}`, {
-        method: 'POST', // Change to POST
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRFToken': csrfToken
-        },
-        body: JSON.stringify({
-            name: categoryName,
-            description: categoryDescription,
-            color: categoryColor,
-            priority_level: priorityLevel,
-            visibility: visibility,
-            is_shared: isShared,
-            icon: categoryIcon,
-            archived: archived
-        })
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
-
-        if (response.ok) {
-            const contentType = response.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-                return response.json();
-            } else {
-                console.error('Expected JSON, got text response:', response);
-                throw new Error('Expected JSON response but received a different format');
-            }
-        } else if (response.status === 400) {
-            // Handle CSRF or form validation errors
-            return response.json().then(data => {
-                throw new Error(data.error || 'Invalid request');
-            });
-        } else {
-            return response.text().then(text => {
-                console.error('Response error text:', text);
-                throw new Error(`Error response from server: ${text}`);
-            });
-        }
-    })
-    .then(data => {
-        if (data.success) {
-            alert(data.message || 'Category updated successfully.');
-            document.getElementById('editCategoryModal').style.display = 'none';
-            window.location.reload();
-        } else {
-            alert(data.error || 'Failed to update category.');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Failed to update category. Please try again.');
-    });
-}
-
+})

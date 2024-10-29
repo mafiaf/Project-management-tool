@@ -10,72 +10,73 @@ import json
 from flask_wtf.csrf import validate_csrf, CSRFError, validate_csrf
 from app.utils.utils import login_required, role_required
 
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 main = Blueprint('main', __name__)
 
-
 @main.route('/')
 def home():
     return render_template('index.html')
 
-@main.route('/register', methods=['GET', 'POST'])
+@main.route('/register', methods=['POST'])
 def register():
     form = RegistrationForm()
     if form.validate_on_submit():
-        # Check if email already exists
+        # Check if email or username already exists
         existing_user_email = User.query.filter_by(email=form.email.data).first()
         existing_user_username = User.query.filter_by(username=form.username.data).first()
 
         if existing_user_email:
-            flash('Email already exists. Please use a different email.', 'danger')
-            print("Redirected to register: Email already exists.")  # Debug print
-            return render_template('register.html', form=form)
-
+            return jsonify({"success": False, "message": "Email already exists. Please use a different email."}), 400
         if existing_user_username:
-            flash('Username already exists. Please use a different username.', 'danger')
-            print("Redirected to register: Username already exists.")  # Debug print
-            return render_template('register.html', form=form)
+            return jsonify({"success": False, "message": "Username already exists. Please use a different username."}), 400
 
         # If no conflicts, create a new user
         user = User(email=form.email.data, username=form.username.data)
         user.set_password(form.password.data)
-
-        # Assign "Admin" role by default for newly registered users
-        user.role = 'ADMIN'  # Add this line to set the user as an ADMIN
+        user.role = 'ADMIN'
 
         db.session.add(user)
         db.session.commit()
 
-        flash('Registration successful! You can now log in.', 'success')
-        print("User registered successfully.")
-        return redirect(url_for('main.login'))
+        return jsonify({"success": True, "message": "Registration successful! You can now log in."}), 200
+    else:
+        # Send all validation errors back to the user
+        errors = form.errors
+        error_messages = []
+        for field, error_list in errors.items():
+            for error in error_list:
+                error_messages.append(f"{field}: {error}")
+        return jsonify({"success": False, "message": " ".join(error_messages)}), 400
 
-    # If form is not validated on submit, just render the page again
-    print("Form validation failed or GET request.")
-    return render_template('register.html', form=form)
 
 @main.route('/login', methods=['GET', 'POST'])
 def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        if user and user.check_password(form.password.data):
-            session['user_id'] = user.id
+    login_form = LoginForm()
+    registration_form = RegistrationForm()
 
-            # Assuming `user.role` is an object and has an attribute like `name` or `id`
-            session['user_role'] = user.role.name  # Save the role name (string)
-            
-            logger.info(f"User {user.email} logged in successfully with role {user.role.name}")
-            flash('Login successful!', 'success')
-            return redirect(url_for('main.dashboard'))
+    if request.method == 'POST':
+        if login_form.validate_on_submit():
+            # Check if the user exists and the password is correct
+            user = User.query.filter_by(email=login_form.email.data).first()
+            if user and user.check_password(login_form.password.data):
+                session['user_id'] = user.id
+                session['user_role'] = user.role.name  # Assuming `user.role` has a `name` attribute
+                return jsonify({"success": True, "redirect_url": url_for('main.dashboard')}), 200
+            else:
+                # Return a JSON response indicating invalid login details
+                return jsonify({"success": False, "message": "Invalid email or password."}), 400
         else:
-            logger.warning(f"Failed login attempt for email: {form.email.data}")
-            flash('Login failed. Please check your email and password.', 'danger')
-    return render_template('login.html', form=form)
+            # Return a JSON response for form validation errors
+            errors = []
+            for field, field_errors in login_form.errors.items():
+                for error in field_errors:
+                    errors.append(f"{getattr(login_form, field).label.text}: {error}")
+            return jsonify({"success": False, "message": "Form validation failed. " + " ".join(errors)}), 400
 
+    # If a GET request, render the login template
+    return render_template('login.html', login_form=login_form, registration_form=registration_form)
 
 
 @main.route('/profile', methods=['GET', 'POST'])
@@ -334,8 +335,6 @@ def update_task():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-
-
 # Handling Recurring Tasks Logic
 @main.route('/handle_recurring_tasks')
 @login_required
@@ -510,7 +509,6 @@ def share_task(task_id):
         users=users
     )
 
-
 @main.route('/invitations', methods=['GET'])
 @login_required
 def view_invitations():
@@ -550,7 +548,6 @@ def cancel_invitation(invitation_id):
         print(f"Error occurred while canceling invitation: {e}")
 
     return redirect(url_for('main.view_invitations'))
-
 
 @main.route('/invitation/<int:invitation_id>/accept', methods=['POST'])
 @login_required
@@ -811,28 +808,34 @@ def edit_category(category_id):
     if not user_role or user_role[0] not in ['ADMIN', 'OWNER']:
         return jsonify({"success": False, "error": "You do not have permission to edit this category."}), 403
 
-    if request.method == 'POST' and request.is_json:
+    if request.method == 'POST':
+        if request.is_json:
+            data = request.get_json()
+        else:
+            # Handle form data submission if not sent as JSON
+            data = request.form
+
+        # CSRF Token Validation
+        csrf_token = data.get('csrf_token')
         try:
-            csrf_token = request.headers.get("X-CSRFToken")
             validate_csrf(csrf_token)
         except CSRFError:
             return jsonify({"success": False, "error": "Invalid CSRF token"}), 400
 
-        data = request.get_json()
         if not data:
             return jsonify({"success": False, "error": "No data provided"}), 400
 
-        # Update category fields with JSON data
-        category.name = data.get('name', category.name)
-        category.description = data.get('description', category.description)
-        category.color = data.get('color', category.color)
-        category.priority_level = data.get('priority_level', category.priority_level)
+        # Update category fields
+        category.name = data.get('categoryName', category.name)
+        category.description = data.get('categoryDescription', category.description)
+        category.color = data.get('categoryColor', category.color)
+        category.priority_level = data.get('priorityLevel', category.priority_level)
         category.visibility = data.get('visibility', category.visibility)
-        category.is_shared = data.get('is_shared', category.is_shared)
-        category.icon = data.get('icon', category.icon)
-        category.archived = data.get('archived', category.archived)
-        category.updated_at = datetime.utcnow()
+        category.is_shared = data.get('isShared', category.is_shared) == 'on'
+        category.icon = data.get('categoryIcon', category.icon)
+        category.archived = 'archived' in data  # Checkbox data
 
+        category.updated_at = datetime.utcnow()
         db.session.commit()
 
         # Log changes
@@ -849,6 +852,31 @@ def edit_category(category_id):
     return jsonify({"success": False, "error": "Invalid request format"}), 400
 
 
+@main.route('/get_category_data/<int:category_id>', methods=['GET'])
+@login_required
+@role_required('ADMIN', 'OWNER', context='category', context_id=lambda **kwargs: kwargs.get('category_id'))
+def get_category_data(category_id):
+    category = Category.query.get_or_404(category_id)
+    user_id = session.get('user_id')
+
+    # Check if the logged-in user has access rights to this category
+    user_role = db.session.query(category_user.c.role).filter_by(category_id=category_id, user_id=user_id).first()
+    if not user_role or user_role[0] not in ['ADMIN', 'OWNER']:
+        return jsonify({"success": False, "error": "You do not have permission to view this category."}), 403
+
+    category_data = {
+        'id': category.id,
+        'name': category.name,
+        'description': category.description,
+        'color': category.color,
+        'priority_level': category.priority_level,
+        'visibility': category.visibility,
+        'is_shared': category.is_shared,
+        'icon': category.icon,
+        'archived': category.archived
+    }
+
+    return jsonify({"success": True, "category": category_data}), 200
 
 
 @main.route('/delete_category/<int:category_id>', methods=['POST'])
@@ -880,20 +908,25 @@ def delete_category(category_id):
         return redirect(url_for('main.dashboard'))
 
 
-
 @main.route('/add_category', methods=['POST'])
 @login_required
 def add_category():
     user_id = session.get('user_id')
-    category_name = request.form.get('categoryName')
-    category_color = request.form.get('categoryColor', '#007bff')
-    category_description = request.form.get('categoryDescription', '')
-    priority_level = request.form.get('priorityLevel', 'Medium')
+
+    # Log the entire request.form to see what data is being received
+    print("Received form data:", request.form)
+
+    # Use the correct field names matching the submitted data
+    category_name = request.form.get('name')
+    category_color = request.form.get('color', '#007bff')
+    category_description = request.form.get('description', '')
+    priority_level = request.form.get('priority_level', 'Medium')
     visibility = request.form.get('visibility', 'Private')
-    is_shared = bool(request.form.get('isShared'))
-    icon = request.form.get('categoryIcon', '')
+    is_shared = bool(request.form.get('is_shared'))
+    icon = request.form.get('icon', '')
     archived = bool(request.form.get('archived'))
 
+    # Check if category name is present
     if category_name:
         # Create the new category
         new_category = Category(
@@ -920,8 +953,6 @@ def add_category():
         flash("Category name is required.", "error")
 
     return redirect(url_for('main.categories'))
-
-
 
 
 @main.route('/mark_all_completed/<int:category_id>', methods=['POST'])
@@ -982,4 +1013,3 @@ def get_tasks():
     logger.info(f"Events returned: {events}")
 
     return jsonify(events)
-

@@ -29,7 +29,6 @@ category_user = Table(
     Column('role', String, nullable=False)
 )
 
-
 # Association table for the many-to-many relationship between Task and User
 task_assignees = Table(
     'task_assignees', db.Model.metadata,

@@ -14,24 +14,74 @@
     --icon-btn-size: 30px;
 }
 
+.background-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('https://images.pexels.com/photos/691668/pexels-photo-691668.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1') no-repeat center center fixed;
+    background-size: cover;
+    z-index: -1; 
+    filter: blur(8px); 
+}
+
+.glass-container {
+    position: relative;
+    width: 98.5%; 
+    height: 95vh; 
+    background: rgba(255, 255, 255, 0.2); 
+    border-radius: 20px;
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+}
+
 /* Title Styling */
 .title {
     width: 100%; 
     text-align: center; 
     position: relative; 
-    top: 20px; 
     font-size: 1.5em; 
     margin-bottom: 40px; 
-
 }
 
 /* Main Content Styling */
 .main-content {
-    margin-left: 250px; 
-    padding: 20px;
+    width: calc(98% - 300px);
+    margin: 20px; /* Add more breathing space for centering */
+    margin-left: 260px; /* Adjusted to align well with the sidebar */
+    margin-top: 90px; /* Adjust top margin to align with other components */
+    border-radius: 20px;
+    padding: 40px;
+    flex-grow: 1;
+    background: rgba(255, 255, 255, 0.3); /* Softer glass-like look for the background */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* maybe we can apply this for each component in dashboard TRIAL 
+.dashboard-content {
+    margin: 20px; 
+    margin-left: 260px; 
+    margin-top: 100px; 
+    border-radius: 20px;
+    padding: 40px;
     box-sizing: border-box;
     flex-grow: 1;
+    background: rgba(255, 255, 255, 0.3); 
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
 }
+*/
 
 
 /* Sidebar Styling */
@@ -39,11 +89,11 @@
     width: 200px;
     height: 85%;
     position: fixed;
-    background-color: var(--sidebar-background, #f8f9fa);
+    background-color: var(--sidebar-background, #ffffff);
     color: #333;
     padding: 20px;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
-    z-index: 1000;
+    z-index: 999;
     border-radius: 30px;
     display: flex;
     flex-direction: column;
@@ -63,9 +113,15 @@
 }
 
 /* Sidebar Menu */
-.sidebar-menu {
-    list-style: none;
-    padding: 0;
+.sidebar-menu a {
+    color: #333; 
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s, background-color 0.3s;
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    border-radius: 10px;
 }
 
 /* Sidebar Menu Items */
@@ -101,13 +157,16 @@
 
 /* Sticky Header */
 .sticky-header {
-    position: sticky;
-    top: 0;
-    width: 100%;
-    background-color: rgba(255, 255, 255, 0.8); 
-    padding: 25px 30px; 
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    z-index: 850;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 20px;
+    padding-right: 20px;
+    z-index: 15; /* Ensure sticky header is above main content */
+    width: auto; /* Set width to fit content */
 }
 
 /* Top Right Icons */
@@ -115,8 +174,7 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 20px;  
-    padding-right: 50px; 
+    gap: 20px;
 }
 
 /* Icon Container */
@@ -163,21 +221,67 @@
     background-color: #6c757d;
 }
 
+/* Modal Styling */
+.enhanced-modal {
+    width: 500px;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    font-family: 'Open Sans', sans-serif;
+}
+
+/* Grid Layout for Form Fields */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Checkbox Group Styling */
+.checkbox-group {
+    flex-direction: row;
+    align-items: center;
+}
+
+.checkbox-group label {
+    margin-left: 5px;
+}
+
+/* Input Styling */
+input[type="text"], input[type="color"], select, textarea {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    transition: border-color 0.3s;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+
 /* Grid container for categories */
 .grid-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--card-margin);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Ensure the cards align from left to right */
+    gap: 20px; /* Space between the cards */
     justify-content: center;
     padding: 20px;
-    margin-left: 250px; 
 }
 
 /* General Modal Styling */
 .modal {
     display: none; /* Hidden by default */
     position: fixed; /* Stay in place */
-    z-index: 999; /* Sit on top */
+    z-index: 100; /* Sit on top */
     left: 0;
     top: 0;
     width: 100%; /* Full width */
@@ -193,6 +297,7 @@
 .modal-content {
     background-color: #fefefe;
     margin: auto;
+    z-index: 1001;
     padding: 20px;
     border: 1px solid #888;
     width: 80%;
@@ -377,7 +482,7 @@
 
 /* Add Category Card Styling */
 .add-category-card {
-    margin-left: 350px; 
+    margin-left: 50px; 
     width: var(--card-width);
     height: var(--card-height);
     background-color: #e0e0e0;
@@ -387,6 +492,8 @@
     justify-content: center;
     border-radius: 30px;
     cursor: pointer;
+    pointer-events: auto;
+    z-index: 10;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s, box-shadow 0.3s;
 }
@@ -503,10 +610,64 @@
     font-weight: bold;
 }
 
+/* Button Design */
 .btn {
-    padding: 10px;
-    margin-top: 10px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    color: #fff;
+    font-weight: bold;
 }
+
+.btn-primary {
+    background-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: darken(var(--primary-color), 10%);
+}
+
+.btn-success {
+    background-color: var(--secondary-color);
+}
+
+.btn-success:hover {
+    background-color: darken(var(--secondary-color), 10%);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background-color: darken(#6c757d, 10%);
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+}
+
+.btn-danger:hover {
+    background-color: darken(#e74c3c, 10%);
+}
+
+.edit-category-btn {
+    pointer-events: auto;
+    cursor: pointer;
+    z-index: 1002; /* Ensure the button is above all relevant content */
+}
+
+/* Color Representation */
+.color-box {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-left: 10px;
+    border: 1px solid #333; /* Optional: add a border for better visibility */
+}   
 
 /* Responsive Adjustments */
 @media screen and (max-width: 768px) {

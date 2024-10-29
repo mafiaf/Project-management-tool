@@ -9,10 +9,77 @@
 </head>
 
 <body>
-    {% extends "base.html" %} 
+    {% extends "base.html" %}
     {% block content %}
-    <h1>{{ category.name }}</h1>
-    <p>{{ category.description }}</p>
+
+    <div class="category-details card" 
+    data-category-id="{{ category.id }}"
+    data-category-name="{{ category.name }}"
+    data-category-description="{{ category.description }}"
+    data-category-color="{{ category.color }}"
+    data-category-priority-level="{{ category.priority_level }}"
+    data-category-visibility="{{ category.visibility }}"
+    data-category-shared="{{ 'Yes' if category.is_shared else 'No' }}"
+    data-category-archived="{{ 'Yes' if category.archived else 'No' }}"
+    data-category-icon="{{ category.icon }}">
+        <h1>{{ category.name }}</h1>
+        <p><strong>Description:</strong> {{ category.description }}</p>
+        <p><strong>Priority Level:</strong> {{ category.priority_level }}</p>
+        <p><strong>Visibility:</strong> {{ category.visibility }}</p>
+        <p><strong>Shared:</strong> {{ 'Yes' if category.is_shared else 'No' }}</p>
+        <p><strong>Archived:</strong> {{ 'Yes' if category.archived else 'No' }}</p>
+        <p><strong>Category Color:</strong> <span class="color-box" style="background-color: {{ category.color }}"></span></p>
+        <p><strong>Icon:</strong> {{ category.icon }}</p>
+            
+        <!-- Edit Button -->
+        <button class="btn btn-primary edit-category-btn" id="openCategoryModalButton" data-category-id="{{ category.id }}">Edit Category</button>
+    </div>
+
+    <!-- Modal for editing a category -->
+    <div id="editCategoryModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-btn" id="closeEditModal">&times;</span>
+            <h2>Edit Category</h2>
+            <form id="editCategoryForm" onsubmit="submitEditCategory(event)">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="editCategoryId" name="categoryId">
+
+                <!-- Form Fields -->
+                <label for="editCategoryName">Category Name:</label>
+                <input type="text" id="editCategoryName" name="categoryName" required>
+
+                <label for="editCategoryDescription">Category Description:</label>
+                <textarea id="editCategoryDescription" name="categoryDescription" rows="3"></textarea>
+
+                <label for="editCategoryColor">Category Color:</label>
+                <input type="color" id="editCategoryColor" name="categoryColor">
+
+                <label for="editCategoryPriority">Priority Level:</label>
+                <select id="editCategoryPriority" name="priorityLevel">
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                </select>
+
+                <label for="editCategoryVisibility">Visibility:</label>
+                <select id="editCategoryVisibility" name="visibility">
+                    <option value="Public">Public</option>
+                    <option value="Private">Private</option>
+                </select>
+
+                <label for="editCategoryShared">Share this Category?</label>
+                <input type="checkbox" id="editCategoryShared" name="isShared">
+
+                <label for="editCategoryIcon">Icon Path or Name:</label>
+                <input type="text" id="editCategoryIcon" name="categoryIcon">
+
+                <label for="editCategoryArchived">Archived?</label>
+                <input type="checkbox" id="editCategoryArchived" name="archived">
+
+                <button type="submit" class="btn">Save Changes</button>
+            </form>
+        </div>
+    </div>
 
     <h2>Tasks for Selected Category:</h2>
     <div class="tasks-grid">
@@ -46,11 +113,7 @@
         {% endif %}
     </div>
     
-
-    <!-- JavaScript -->
-    <script src="{{ url_for('static', filename='category.js') }}"></script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='categories.js') }}" defer></script>
     {% endblock %}
 </body>
-
 </html>

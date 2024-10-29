@@ -11,7 +11,7 @@
     {% block content %}
     <div class="container">
         <h1>Add New Category</h1>
-        <form method="POST">
+        <form id="createCategoryForm" method="POST" action="{{ url_for('main.add_category') }}">
             {{ form.hidden_tag() }}
 
             <div class="form-group">
