@@ -112,8 +112,12 @@
             <p>No tasks found in this category.</p>
         {% endif %}
     </div>
-    
-    <script src="{{ url_for('static', filename='categories.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/submit-handlers.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/dom-content-loaded.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/category-management.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/task-management.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/modal-handling.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/menu-handling.js') }}" defer></script>
     {% endblock %}
 </body>
 </html>
