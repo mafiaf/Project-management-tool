@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>  <!-- Set title dynamically -->
+    <title>{{ title }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
@@ -11,7 +11,7 @@
     {% block content %}
     <!-- Main Content -->
     <div class="main-content">
-        <h1>{{ heading }}</h1>  <!-- Set heading dynamically -->
+        <h1>{{ heading }}</h1>
 
         <form method="POST" action="{{ url_for('main.add_task') }}">
             {{ form.hidden_tag() }}
@@ -22,10 +22,6 @@
             <div>
                 {{ form.description.label }}<br>
                 {{ form.description(rows=4) }}
-            </div>
-            <div>
-                {{ form.category.label }}<br>
-                {{ form.category() }}
             </div>
             <div>
                 {{ form.priority.label }}<br>
@@ -40,12 +36,16 @@
                 {{ form.tags() }}
             </div>
             <div>
-                {{ form.recurring.label }}<br>
-                {{ form.recurring() }}
+                {{ form.is_recurring.label }}<br>
+                {{ form.is_recurring() }}
             </div>
             <div>
-                {{ form.reminder.label }}<br>
-                {{ form.reminder() }}
+                {{ form.recurrence_frequency.label }}<br>
+                {{ form.recurrence_frequency() }}
+            </div>
+            <div>
+                {{ form.reminder_time.label }}<br>
+                {{ form.reminder_time() }}
             </div>
             <div>
                 <button type="submit">{{ submit_label }}</button>

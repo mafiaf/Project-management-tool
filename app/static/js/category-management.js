@@ -1,3 +1,17 @@
+document.addEventListener('DOMContentLoaded', function () {
+    const categoryCards = document.querySelectorAll('.category-card');
+    categoryCards.forEach(card => {
+        if (!card.classList.contains('add-category-card')) {
+            card.addEventListener('click', function () {
+                const categoryId = card.getAttribute('data-category-id');
+                if (categoryId) {
+                    window.location.href = `/category/${categoryId}`;
+                }
+            });
+        }
+    });
+});
+
 function setupCategoryManagement() {
     const editCategoryButtons = document.querySelectorAll('.edit-category-btn');
     editCategoryButtons.forEach(button => {

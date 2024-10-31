@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     console.log("DOM fully loaded and parsed.");
 
-    // Initialize other functionalities
+    // Initialize functionalities
     setupCategoryManagement();
     setupTaskManagement();
     setupModalHandling();

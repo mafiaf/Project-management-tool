@@ -30,6 +30,28 @@
             {% if not categories %}
                 <p class="no-categories-message">You have no categories yet. Click the add button to create one.</p>
             {% endif %}
+
+            <div class="search-and-filter">
+                <!-- Search Field -->
+                <input type="text" id="searchCategories" placeholder="Search categories...">
+                
+                <!-- Filter by Priority -->
+                <select id="filterPriority">
+                    <option value="">All Priorities</option>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                </select>
+            
+                <!-- Filter by Visibility -->
+                <select id="filterVisibility">
+                    <option value="">All Visibility</option>
+                    <option value="Public">Public</option>
+                    <option value="Private">Private</option>
+                </select>
+
+                <button id="searchButton">Search</button> 
+            </div>
             
             <div class="grid-container">
                 <!-- Loop for Category Cards -->
@@ -148,14 +170,13 @@
     </div>
 </div>
 
-
-                <!-- Add Category Card with Similar Design -->
+                <!-- Add Category Card with similar Design -->
                 <div class="add-category-card" id="addCategoryCard">
                     <h2>+</h2>
                     <br>
                     <p>Add New Category</p>
                 </div>
-        
+
 
 <!-- Modal for editing a category -->
 <div id="editCategoryModal" class="modal" style="display: none;">
@@ -201,12 +222,15 @@
         </form>
     </div>
 </div>
-
-
-
             <!-- Scripts -->
-            <script src="{{ url_for('static', filename='categories.js') }}"></script>
-        {% endblock %}
+            <script src="{{ url_for('static', filename='js/submit-handlers.js') }}" defer></script>
+            <script src="{{ url_for('static', filename='js/dom-content-loaded.js') }}" defer></script>
+            <script src="{{ url_for('static', filename='js/category-management.js') }}" defer></script>
+            <script src="{{ url_for('static', filename='js/category-search.js') }}" defer></script>
+            <script src="{{ url_for('static', filename='js/task-management.js') }}" defer></script>
+            <script src="{{ url_for('static', filename='js/modal-handling.js') }}" defer></script>
+            <script src="{{ url_for('static', filename='js/menu-handling.js') }}" defer></script>
+            {% endblock %}
 </body>
 </html>
 

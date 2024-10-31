@@ -164,4 +164,9 @@ class TaskForm(FlaskForm):
     )
     reminder_time = DateTimeField('Reminder Time', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
 
-    
+    category = SelectField(
+        'Category', 
+        coerce=int,
+        validators=[Optional()]
+    )
+

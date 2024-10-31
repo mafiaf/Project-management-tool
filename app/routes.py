@@ -271,7 +271,7 @@ def add_task():
                 start_time=form.start_time.data,
                 end_time=form.end_time.data,
                 category_id=selected_category_id,
-                user_id=user_id  # Associate task with the logged-in user
+                user_id=user_id  # !!Associate task with the logged-in user
             )
             db.session.add(new_task)
             db.session.commit()
@@ -1013,3 +1013,57 @@ def get_tasks():
     logger.info(f"Events returned: {events}")
 
     return jsonify(events)
+
+@main.route('/fetch_categories', methods=['POST'])
+@login_required
+def fetch_categories():
+    """Fetch categories based on search and filter criteria."""
+    user_id = session.get('user_id')
+    data = request.get_json()
+
+    search_query = data.get('search', '').strip().lower()
+    priority = data.get('priority')
+    visibility = data.get('visibility')
+
+    # Base query
+    query = Category.query.filter_by(user_id=user_id)
+
+    # Apply search filter
+    if search_query:
+        query = query.filter(Category.name.ilike(f"%{search_query}%"))
+
+    # Apply priority filter
+    if priority:
+        query = query.filter_by(priority_level=priority)
+
+    # Apply visibility filter
+    if visibility:
+        query = query.filter_by(visibility=visibility)
+
+    categories = query.all()
+    categories_data = [{
+        'id': category.id,
+        'name': category.name,
+        'description': category.description,
+        'color': category.color,
+        'priority_level': category.priority_level,
+        'visibility': category.visibility,
+    } for category in categories]
+
+    return jsonify({'categories': categories_data})
+
+
+@main.route('/toggle_category_status/<int:category_id>', methods=['POST'])
+@login_required
+def toggle_category_status(category_id):
+    """Toggle the active status of a category."""
+    user_id = session.get('user_id')
+    category = Category.query.filter_by(id=category_id, user_id=user_id).first()
+
+    if category:
+        # Toggle visibility or any other status field you want to change
+        category.visibility = 'Private' if category.visibility == 'Public' else 'Public'
+        db.session.commit()
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False}), 404
