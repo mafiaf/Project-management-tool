@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()  // Make sure CSRF protection is applied
+                'X-CSRFToken': getCsrfToken()  // CSRF token 
             },
             body: JSON.stringify({
                 search: searchQuery,

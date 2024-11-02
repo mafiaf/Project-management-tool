@@ -518,10 +518,10 @@ input:focus, select:focus, textarea:focus {
 }
 
 .task-card {
-    background-color: #fffcac; /* Sticky note yellow */
-    border-radius: 30px;
+    background-color: #ffffff; /* Sticky note yellow */
+    border-radius: 15px;
     padding: 15px;
-    box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 3px 3px 15px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s, box-shadow 0.2s;
     width: 100%;
     max-height: 400px;
@@ -530,46 +530,67 @@ input:focus, select:focus, textarea:focus {
     flex-direction: column;
     justify-content: space-between;
     position: relative;
-    transform: rotate(calc(-2deg + (4 * random()))); /* Sticky note tilt */
 }
 
 .task-card:hover {
-    transform: translateY(-5px) rotate(0); 
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    transform: translateY(-5px) rotate(0);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
+/* Task Card Title */
 .task-card h3 {
     margin-top: 0;
-    font-size: 1.1em;
+    font-size: 1.2em;
 }
 
+/* Task Card Description */
 .task-card p {
     margin: 10px 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-height: 300px;
+    max-height: 80px; 
     color: #333;
 }
 
-/* Action Buttons inside Task Card */
+
 .task-card .task-actions {
     display: flex;
-    gap: 10px;
     flex-wrap: wrap;
-    margin-top: 10px;
+    gap: 8px;
+    margin-top: 15px;
 }
 
-.task-card button {
-    border-radius: 30px;
-    background: #2196f3;
-    color: white;
+.task-card button,
+.task-card .btn {
+    border-radius: 20px;
     padding: 6px 12px;
     border: none;
     cursor: pointer;
+    background-color: #2196f3; /* Blue color for buttons */
+    color: white;
+    font-size: 0.9em;
+    transition: background-color 0.2s, transform 0.1s;
 }
 
-.task-card button:hover {
-    background: #1e88e5;
+.task-card button:hover,
+.task-card .btn:hover {
+    background-color: #1e88e5;
+    transform: translateY(-2px);
+}
+
+.task-card input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.tasks-grid .task-card {
+    margin-bottom: 15px;
+}
+
+
+.task-completed {
+    opacity: 0.8;
+    text-decoration: line-through;
+    background-color: #d9ffd9; 
 }
 
 

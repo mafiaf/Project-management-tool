@@ -43,11 +43,9 @@ class Category(db.Model):
     color = db.Column(db.String(7), nullable=False, default="#007bff")
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
-    # Updated Enum Fields
     priority_level = db.Column(db.Enum('Low', 'Medium', 'High', name='priority_levels'), default='Medium')
     visibility = db.Column(db.Enum('Public', 'Private', name='visibility_levels'), default='Private')
     
-    # Other Fields
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
     is_shared = db.Column(db.Boolean, default=False)
@@ -55,10 +53,7 @@ class Category(db.Model):
     default_reminders = db.Column(db.Boolean, default=False)
     archived = db.Column(db.Boolean, default=False)
 
-    # Many-to-many relationship for shared users
     shared_with = db.relationship('User', secondary='category_user', backref='shared_categories')
-
-    # Existing Relationships
     activity_logs = db.relationship('ActivityLog', back_populates='category', lazy=True)
     tasks = db.relationship('Task', back_populates='category', lazy=True)
 
@@ -66,20 +61,22 @@ class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)
+    start_time = db.Column(db.DateTime, nullable=True)
+    end_time = db.Column(db.DateTime, nullable=True)
     completed = db.Column(db.Boolean, default=False)
-    
+
     priority = db.Column(db.String(20), nullable=False, default='Medium')  
     status = db.Column(db.String(20), nullable=False, default='Not Started')  
     tags = db.Column(db.String(255), nullable=True)  
     is_recurring = db.Column(db.Boolean, default=False)
     recurrence_frequency = db.Column(db.String(20), nullable=True) 
-    reminder_time = db.Column(db.DateTime, nullable=True)  
-    
-    category = relationship('Category', back_populates='tasks')
-    task_owner = relationship('User', back_populates='tasks_owned_by_user')  
-    assigned_users = relationship('User', secondary=task_assignees, back_populates='assigned_tasks')  
+    reminder_time = db.Column(db.DateTime, nullable=True)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    category = db.relationship('Category', back_populates='tasks')
+    task_owner = db.relationship('User', back_populates='tasks_owned_by_user')
+    assigned_users = db.relationship('User', secondary='task_assignees', back_populates='assigned_tasks')
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -88,7 +85,6 @@ class User(db.Model):
     password_hash = db.Column(db.String(128))
     role = db.Column(db.Enum(UserRole), default=UserRole.VIEWER)
 
-    # Relationship to tasks - a user can own many tasks
     tasks_owned_by_user = relationship('Task', back_populates='task_owner', lazy=True)
     assigned_tasks = relationship('Task', secondary=task_assignees, back_populates='assigned_users')  # Added this line
 
@@ -107,7 +103,6 @@ class TaskInvitation(db.Model):
     status = db.Column(db.String(20), nullable=False, default='Pending')  # "Pending", "Accepted", "Declined"
     date_sent = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
-    # Relationships
     task = db.relationship('Task', backref='invitations')
     inviter = db.relationship('User', foreign_keys=[inviter_id])
     invitee = db.relationship('User', foreign_keys=[invitee_id])
@@ -134,39 +129,3 @@ class ActivityLog(db.Model):
     user = db.relationship('User', backref=db.backref('activity_logs', lazy=True))
     task = db.relationship('Task', backref=db.backref('activity_logs', lazy=True))
     category = db.relationship('Category', back_populates='activity_logs')
-
-class TaskForm(FlaskForm):
-    title = StringField('Title', validators=[DataRequired()])
-    description = TextAreaField('Description', validators=[Optional()])
-    start_time = DateTimeField('Start Time', format='%Y-%m-%d %H:%M:%S', validators=[DataRequired()])
-    end_time = DateTimeField('End Time', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
-    completed = BooleanField('Completed')
-
-    # New fields for the form
-    priority = SelectField(
-        'Priority', 
-        choices=[('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High')], 
-        default='Medium', 
-        validators=[DataRequired()]
-    )
-    status = SelectField(
-        'Status', 
-        choices=[('Not Started', 'Not Started'), ('In Progress', 'In Progress'), ('Blocked', 'Blocked'), ('Completed', 'Completed')], 
-        default='Not Started', 
-        validators=[DataRequired()]
-    )
-    tags = StringField('Tags (comma-separated)', validators=[Optional()])  # Users can input tags separated by commas
-    is_recurring = BooleanField('Is Recurring?')
-    recurrence_frequency = SelectField(
-        'Recurrence Frequency', 
-        choices=[('Daily', 'Daily'), ('Weekly', 'Weekly'), ('Monthly', 'Monthly')], 
-        validators=[Optional()]
-    )
-    reminder_time = DateTimeField('Reminder Time', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
-
-    category = SelectField(
-        'Category', 
-        coerce=int,
-        validators=[Optional()]
-    )
-

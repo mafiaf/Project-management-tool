@@ -9,10 +9,7 @@
 <body>
     {% extends "base.html" %}
     {% block content %}
-    <!-- Main Content -->
-    <div class="main-content">
         <h1>{{ heading }}</h1>
-
         <form method="POST" action="{{ url_for('main.add_task') }}">
             {{ form.hidden_tag() }}
             <div>
@@ -22,6 +19,10 @@
             <div>
                 {{ form.description.label }}<br>
                 {{ form.description(rows=4) }}
+            </div>
+            <div>
+                {{ form.category.label }}<br>
+                {{ form.category() }}
             </div>
             <div>
                 {{ form.priority.label }}<br>
@@ -53,7 +54,6 @@
         </form>
 
         <a href="{{ url_for('main.dashboard') }}">Back to Dashboard</a>
-    </div>
     {% endblock %}
 </body>
 </html>

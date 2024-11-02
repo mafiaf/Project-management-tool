@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>My Tasks</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 
@@ -28,7 +28,7 @@
                     <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
                         <button type="submit" class="btn btn-danger">Delete</button>
                     </form>
-                    <a href="{{ url_for('main.share_task', task_id=task.id) }}" class="btn btn-secondary">Share Task</a>
+                    <a href="{{ url_for('main.share_task', task_id=task.id) }}" class="btn btn-secondary">Manage Users</a>
                     <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
                 </li>
             {% endfor %}
@@ -38,7 +38,7 @@
     </ul>
 
     <!-- Display shared tasks -->
-    <h2>Shared Tasks:</h2>
+    <h2>Invited Tasks:</h2>
     <ul>
         {% if shared_tasks %}
             {% for task, role in shared_tasks %}
@@ -47,12 +47,14 @@
                         <strong>{{ task.title }}</strong>
                     </a>: {{ task.description }} (Role: {{ role }})
                     <br>
-                    <!-- Links to view and interact with shared tasks (editor/viewer may have limited actions) -->
-                    <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
-
-                    <!-- Only show edit button if the user's role is Editor or Admin -->
+                    <br>
                     {% if role in ['Editor', 'Admin'] %}
-                        <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn btn-secondary">Edit Task</a>
+                    <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit Task</a>
+                    {% endif %}
+                    <!-- Links to edit, delete, share, and view comments on tasks -->
+                    <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
+                    {% if role == 'Admin' %}
+                        <a href="{{ url_for('main.manage_task_users', task_id=task.id) }}" class="btn btn-secondary">Manage Users</a>
                     {% endif %}
                 </li>
             {% endfor %}
@@ -62,7 +64,7 @@
     </ul>
 
     <!-- Display uncategorized tasks -->
-    <h2>Uncategorized Tasks:</h2>
+    <h1>Uncategorized Tasks:</h1>
     <ul>
         {% if uncategorized_tasks %}
             {% for task in uncategorized_tasks %}
@@ -76,7 +78,6 @@
                     <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
                         <button type="submit" class="btn btn-danger">Delete</button>
                     </form>
-                    <a href="{{ url_for('main.share_task', task_id=task.id) }}" class="btn btn-secondary">Share Task</a>
                     <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
                 </li>
             {% endfor %}
@@ -85,7 +86,10 @@
         {% endif %}
     </ul>
 
-    {% endblock %}
+    <!-- Debugging information -->
+    <p>Total Uncategorized Tasks: {{ uncategorized_tasks | length }}</p>
 
+    {% endblock %}
 </body>
+
 </html>

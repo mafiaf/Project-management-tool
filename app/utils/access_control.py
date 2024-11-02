@@ -1,6 +1,6 @@
 from functools import wraps
 from flask import redirect, url_for, flash, session
-from ..models import User  # Adjust import as per your project structure
+from ..models import User  
 
 def role_required(*roles):
     def wrapper(fn):
@@ -16,9 +16,9 @@ def role_required(*roles):
                 flash("User not found. Please log in again.", "danger")
                 return redirect(url_for('main.login'))
 
-            # Automatically set the user to admin if they create a category or task
+            # Automatically set the user to owner if they create a category or task
             if user.role is None:
-                user.role = 'OWNER'  # Assuming 'ADMIN' is the role you want to assign
+                user.role = 'OWNER' 
 
             if user.role not in roles:
                 flash("You do not have permission to access this page.", "danger")

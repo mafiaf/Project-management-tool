@@ -1,13 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Task Users and Share Task</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
-
 <body>
     {% extends "base.html" %} 
     {% block content %}
@@ -40,7 +38,7 @@
                 <form method="POST" style="display:inline;">
                     <input type="hidden" name="user_id" value="{{ user.id }}">
                     <select name="role">
-                        <option value="Owner" {% if role == 'Owner' %}selected{% endif %}>Owner</option>
+                        <option value="ADMIN" {% if role == 'ADMIN' %}selected{% endif %}>Admin</option>
                         <option value="Editor" {% if role == 'Editor' %}selected{% endif %}>Editor</option>
                         <option value="Viewer" {% if role == 'Viewer' %}selected{% endif %}>Viewer</option>
                     </select>
@@ -55,8 +53,28 @@
         {% endfor %}
     </table>
 
+    <!-- Sent Invitations Section -->
+    <h2>Pending Invitations</h2>
+    <table>
+        <tr>
+            <th>Invitee Email</th>
+            <th>Role</th>
+            <th>Actions</th>
+        </tr>
+        {% for invitation in invitations %}
+        <tr>
+            <td>{{ invitation.invitee.email }}</td>
+            <td>{{ invitation.role }}</td>
+            <td>
+                <form method="POST" action="{{ url_for('main.cancel_invitation', invitation_id=invitation.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-danger">Cancel Invitation</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
     <h1>Share Task: {{ task.title }}</h1>
-    
     <form method="POST" action="{{ url_for('main.share_task', task_id=task.id) }}">
         {{ form.hidden_tag() }}
         <p>
@@ -73,5 +91,4 @@
     <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
     {% endblock %}
 </body>
-
 </html>

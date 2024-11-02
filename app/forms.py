@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, PasswordField, SubmitField, SelectField, BooleanField
+from wtforms import StringField, TextAreaField, PasswordField, SubmitField, SelectField, BooleanField, DateTimeField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional
 from wtforms_components import ColorField
 
@@ -21,8 +21,34 @@ class LoginForm(FlaskForm):
 class TaskForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired()])
     description = TextAreaField('Description', validators=[Optional()])
+    start_time = DateTimeField('Start Time', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
+    end_time = DateTimeField('End Time', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
+    completed = BooleanField('Completed')
+
+    priority = SelectField(
+        'Priority', 
+        choices=[('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High')], 
+        default='Medium', 
+        validators=[DataRequired()]
+    )
+    status = SelectField(
+        'Status', 
+        choices=[('Not Started', 'Not Started'), ('In Progress', 'In Progress'), ('Blocked', 'Blocked'), ('Completed', 'Completed')], 
+        default='Not Started', 
+        validators=[DataRequired()]
+    )
+    tags = StringField('Tags (comma-separated)', validators=[Optional()])
+    is_recurring = BooleanField('Is Recurring?')
+    recurrence_frequency = SelectField(
+        'Recurrence Frequency', 
+        choices=[('None', 'None'),('Daily', 'Daily'), ('Weekly', 'Weekly'), ('Monthly', 'Monthly')], 
+        validators=[Optional()]
+    )
+    reminder_time = DateTimeField('Reminder Time', format='%Y-%m-%d %H:%M:%S', validators=[Optional()])
+
     category = SelectField('Category', coerce=int, validators=[Optional()])
     submit = SubmitField('Save Changes')
+
 
 class ShareTaskForm(FlaskForm):
     email = StringField('Invitee Email', validators=[DataRequired(), Email()])

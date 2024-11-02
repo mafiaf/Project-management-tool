@@ -12,6 +12,7 @@
     {% extends "base.html" %}
     {% block content %}
 
+
     <div class="category-details card" 
     data-category-id="{{ category.id }}"
     data-category-name="{{ category.name }}"
@@ -80,42 +81,105 @@
             </form>
         </div>
     </div>
+<br>
+<br>
+<!-- Button to Open the Task Modal -->
+<button id="openTaskModalButton" class="btn btn-primary">Add Task</button>
 
-    <h2>Tasks for Selected Category:</h2>
-    <div class="tasks-grid">
-        {% if tasks %}
-            {% for task in tasks %}
-                <div class="task-card {% if task.completed %}task-completed{% endif %}">
-                    <h3>
-                        {{ task.title }}
-                        {% if task.completed %}
-                            <span class="completed-icon">&#x2714;</span> <!-- Green checkmark emoji -->
-                        {% endif %}
-                    </h3>
-                    <p>{{ task.description }}</p>
-    
-                    <!-- Links to edit, delete, share, and view comments on tasks -->
-                    <div class="task-actions">
-                        {% if not task.completed %}
-                            <button onclick="markTaskAsDone('{{ task.id }}')" class="btn btn-success">Mark as Done</button>
-                        {% endif %}
-                        <a href="{{ url_for('main.manage_task_users', task_id=task.id) }}" class="btn btn-secondary">Manage Users</a>
-                        <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn btn-secondary">Edit Task</a>
-                        <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
-                            <button type="submit" class="btn btn-danger">Delete</button>
-                        </form>
-                        <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
-                    </div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <p>No tasks found in this category.</p>
-        {% endif %}
+<!-- Modal for Adding a Task -->
+<div id="addTaskModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-btn" id="closeTaskModal">&times;</span>
+        <h2>Add New Task</h2>
+        <form id="addTaskForm" method="POST" action="{{ url_for('main.add_task') }}">
+            {{ form.hidden_tag() }}
+
+            <!-- Hidden field to pass the category_id to the task form -->
+            <input type="hidden" name="category" value="{{ category.id }}">
+
+            <div>
+                {{ form.title.label }}<br>
+                {{ form.title(size=32) }}
+            </div>
+            <div>
+                {{ form.description.label }}<br>
+                {{ form.description(rows=4) }}
+            </div>
+            <div>
+                {{ form.priority.label }}<br>
+                {{ form.priority() }}
+            </div>
+            <div>
+                {{ form.status.label }}<br>
+                {{ form.status() }}
+            </div>
+            <div>
+                {{ form.tags.label }}<br>
+                {{ form.tags() }}
+            </div>
+            <div>
+                {{ form.is_recurring.label }}<br>
+                {{ form.is_recurring() }}
+            </div>
+            <div>
+                {{ form.recurrence_frequency.label }}<br>
+                {{ form.recurrence_frequency() }}
+            </div>
+            <div>
+                {{ form.reminder_time.label }}<br>
+                {{ form.reminder_time() }}
+            </div>
+            <div>
+                <button type="submit" class="btn">Add Task</button>
+            </div>
+        </form>
     </div>
+</div>
+
+
+<h2>Tasks for Selected Category:</h2>
+<div class="tasks-grid">
+    {% if tasks %}
+        {% for task in tasks %}
+            <div class="task-card {% if task.completed %}task-completed{% endif %}">
+                <h3>
+                    <a href="{{ url_for('main.view_task', task_id=task.id) }}">
+                        {{ task.title }}
+                    </a>
+                    {% if task.completed %}
+                        <span class="completed-icon">&#x2714;</span> <!-- Green checkmark emoji -->
+                    {% endif %}
+                </h3>
+                <p>{{ task.description }}</p>
+
+                <!-- Links to edit, delete, share, and view comments on tasks -->
+                <div class="task-actions">
+                    <form action="{{ url_for('main.toggle_task_done', task_id=task.id) }}" method="POST" style="display:inline;">
+                        {{ form.hidden_tag() }} <!-- This includes the CSRF token -->
+                        <input type="checkbox" id="mark_done_{{ task.id }}" name="completed" onchange="this.form.submit()" {% if task.completed %}checked{% endif %}>
+                        <label for="mark_done_{{ task.id }}">Mark as Done</label>
+                    </form>
+                    <a href="{{ url_for('main.manage_task_users', task_id=task.id) }}" class="btn btn-secondary">Manage Users</a>
+                    <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn btn-secondary">Edit Task</a>
+                    <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
+                        {{ form.hidden_tag() }} <!-- This includes the CSRF token -->
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                    <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No tasks found in this category.</p>
+    {% endif %}
+</div>
+
+
     <script src="{{ url_for('static', filename='js/submit-handlers.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/dom-content-loaded.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/category-management.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/task-management.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/task-modal.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/modal-handling.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/menu-handling.js') }}" defer></script>
     {% endblock %}

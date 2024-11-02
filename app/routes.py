@@ -80,6 +80,7 @@ def login():
 
 
 @main.route('/profile', methods=['GET', 'POST'])
+@login_required
 def profile():
     if 'user_id' not in session:
         flash('You need to be logged in to view your profile.', 'danger')
@@ -117,42 +118,43 @@ def profile():
     return render_template('profile.html', form=form, change_password_form=change_password_form, user=user)
 
 @main.route('/change_password', methods=['POST'])
+@login_required
 def change_password():
-    # Authentication check
-    if 'user_id' not in session:
-        flash('You need to be logged in to change your password.', 'danger')
-        return redirect(url_for('main.login'))
-
     # Fetch current user
     user = User.query.get(session['user_id'])
     if not user:
         flash('Unauthorized access.', 'danger')
         return redirect(url_for('main.login'))
 
-    form = ChangePasswordForm()
+    change_password_form = ChangePasswordForm()
 
-    if form.validate_on_submit():
+    # Profile update form (assuming it's also on the same page)
+    update_profile_form = UpdateProfileForm()
+
+    if change_password_form.validate_on_submit():
         # Verify current password matches the stored password hash
-        if not user.check_password(form.current_password.data):
+        if not user.check_password(change_password_form.current_password.data):
             flash('Current password is incorrect.', 'danger')
-            return redirect(url_for('main.profile'))
-
+        # Check if new password matches the current password
+        elif user.check_password(change_password_form.new_password.data):
+            flash('New password must be different from the current password.', 'danger')
         # Verify new password and confirmation match
-        if form.new_password.data != form.confirm_password.data:
+        elif change_password_form.new_password.data != change_password_form.confirm_password.data:
             flash('New password and confirmation do not match.', 'danger')
+        else:
+            # Update password (hash it)
+            user.set_password(change_password_form.new_password.data)
+            db.session.commit()
+            flash('Password updated successfully!', 'success')
             return redirect(url_for('main.profile'))
 
-        # Update password (hash it)
-        user.set_password(form.new_password.data)
-        db.session.commit()
-        flash('Password updated successfully!', 'success')
-
-    return redirect(url_for('main.profile'))
+    return render_template('profile.html', form=update_profile_form, change_password_form=change_password_form, user=user)
 
 
-@main.route('/dashboard', methods=['GET'])
+
+@main.route('/my_tasks', methods=['GET'])
 @login_required
-def dashboard():
+def my_tasks():
     user_id = session.get('user_id')
 
     # Get the selected category filter from the request
@@ -160,16 +162,6 @@ def dashboard():
 
     # Get all categories owned by the logged-in user
     categories = Category.query.filter_by(user_id=user_id).all()
-
-    # Calculate task statistics for each category
-    for category in categories:
-        # Count the total number of tasks and completed tasks within this category
-        total_tasks = Task.query.filter_by(category_id=category.id).count()
-        completed_tasks = Task.query.filter_by(category_id=category.id, completed=True).count()
-        
-        # Assign these calculated values to the category object
-        category.task_count = total_tasks
-        category.completed_tasks = completed_tasks
 
     # Get all tasks owned by the user
     owned_tasks_query = Task.query.filter(Task.user_id == user_id)
@@ -182,25 +174,32 @@ def dashboard():
     )
 
     if selected_category is not None:
-        # Filter owned and shared tasks by selected category if provided
         owned_tasks_query = owned_tasks_query.filter_by(category_id=selected_category)
         shared_tasks_query = shared_tasks_query.filter(Task.category_id == selected_category)
 
-    # Combine owned and shared tasks
     owned_tasks = owned_tasks_query.all()
     shared_tasks = shared_tasks_query.all()
 
-    # Get pending invitations for the logged-in user
-    invitations = TaskInvitation.query.filter_by(invitee_id=user_id, status='Pending').all()
+    uncategorized_tasks = Task.query.filter(Task.user_id == user_id, Task.category_id == None).all()
+
+    # Debugging
+    logger.info(f"Owned tasks for user {user_id}: {[task.title for task in owned_tasks]}")
+    logger.info(f"Shared tasks for user {user_id}: {[task.title for task, role in shared_tasks]}")
+    logger.info(f"Uncategorized tasks for user {user_id}: {[task.title for task in uncategorized_tasks]}")
 
     return render_template(
-        'dashboard.html',
+        'my_tasks.html',
         categories=categories,
         owned_tasks=owned_tasks,
         shared_tasks=shared_tasks,
-        invitations=invitations,
+        uncategorized_tasks=uncategorized_tasks,
         selected_category=selected_category
     )
+
+@main.route('/dashboard', methods=['GET'])
+@login_required
+def dashboard():
+    return render_template('dashboard.html')
 
 
 @main.route('/logout')
@@ -224,44 +223,29 @@ def statistics():
 def calendar():
     return render_template('calendar.html')
 
-@main.route('/my_tasks', methods=['GET'])
-@login_required
-def my_tasks():
-    user_id = session.get('user_id')
-    tasks = Task.query.filter_by(user_id=user_id).all()
-    return render_template('my_tasks.html', tasks=tasks)
 
-
-@main.route('/add_task', methods=['GET', 'POST'])
+@main.route('/add_task', methods=['POST'])
 @login_required
 def add_task():
     """Route to add a new task, optionally within a specific category"""
     user_id = session.get('user_id')
 
-    # Retrieve category_id from query parameters if available
-    category_id = request.args.get('category_id', type=int)
-
     # Set up the task form and add category choices for the logged-in user
     form = TaskForm()
     categories = Category.query.filter_by(user_id=user_id).all()
-
-    # Add category choices, including a "No Category" option with value -1
     form.category.choices = [(-1, "No Category")] + [(c.id, c.name) for c in categories]
 
-    # If a category_id is provided, set the default value in the form
-    if category_id is not None:
-        form.category.data = category_id
+    # If category_id is provided by form submission, set it
+    category_id = form.category.data
 
-    # If date is passed from FullCalendar, pre-fill the start_time
-    date_str = request.args.get('date', None)
-    if date_str:
-        form.start_time.data = datetime.strptime(date_str, '%Y-%m-%d')
+    # Set default start_time if it is not provided by the form
+    if not form.start_time.data:
+        form.start_time.data = datetime.now()
 
     if form.validate_on_submit():
         # Set category_id to None if "No Category" is selected
-        selected_category_id = form.category.data
-        if selected_category_id == -1:
-            selected_category_id = None
+        if category_id == -1:
+            category_id = None
 
         try:
             # Create a new task with the selected category and assign user_id
@@ -270,14 +254,21 @@ def add_task():
                 description=form.description.data,
                 start_time=form.start_time.data,
                 end_time=form.end_time.data,
-                category_id=selected_category_id,
-                user_id=user_id  # !!Associate task with the logged-in user
+                category_id=category_id,
+                user_id=user_id,
+                completed=form.completed.data,
+                priority=form.priority.data,
+                status=form.status.data,
+                tags=form.tags.data,
+                is_recurring=form.is_recurring.data,
+                recurrence_frequency=form.recurrence_frequency.data,
+                reminder_time=form.reminder_time.data
             )
             db.session.add(new_task)
             db.session.commit()
 
-            # Add the user as the owner of the task in the task_user table
-            stmt = task_user.insert().values(task_id=new_task.id, user_id=user_id, role='Owner')
+            # Add the user as the admin of the task in the task_user table
+            stmt = task_user.insert().values(task_id=new_task.id, user_id=user_id, role='ADMIN')
             db.session.execute(stmt)
             db.session.commit()
 
@@ -291,25 +282,27 @@ def add_task():
             db.session.commit()
 
             flash('Task added successfully!', 'success')
-            return redirect(url_for('main.dashboard'))
+            return redirect(url_for('main.view_category', category_id=category_id) if category_id else url_for('main.dashboard'))
         except Exception as e:
-            db.session.rollback()  # Rollback in case of an error
+            db.session.rollback() 
             flash(f'An error occurred while adding the task: {str(e)}', 'danger')
             logger.error(f"Error occurred: {e}")
 
-    # If form is not valid, print errors for debugging
     if form.errors:
         logger.error(f"Form validation errors: {form.errors}")
         flash(f"Form validation errors: {form.errors}", "danger")
 
-    return render_template('add_task.html', form=form, title="Add New Task", heading="Add New Task", submit_label="Add Task")
+    return redirect(url_for('main.dashboard'))
+
+
+
 
 # Update Task - Drag and Drop functionality
 @main.route('/update_task', methods=['POST'])
 @login_required
 def update_task():
     try:
-        data = request.get_json()  # Parse incoming JSON data
+        data = request.get_json()
         if data is None:
             return jsonify({'status': 'error', 'message': 'Invalid or missing JSON data'}), 400
 
@@ -360,29 +353,40 @@ def handle_recurring_tasks():
             db.session.commit()
     return redirect(url_for('main.dashboard'))
 
+def get_task_changes(task, form):
+    changes = []
+
+    if task.title != form.title.data:
+        changes.append(f"Title changed from '{task.title}' to '{form.title.data}'")
+
+    if task.description != form.description.data:
+        old_desc = task.description if task.description else "None"
+        new_desc = form.description.data if form.description.data else "None"
+        changes.append(f"Description changed from '{old_desc}' to '{new_desc}'")
+
+    return changes
+
 @main.route('/edit_task/<int:task_id>', methods=['GET', 'POST'])
 @login_required
 def edit_task(task_id):
     task = Task.query.get_or_404(task_id)
     user_id = session.get('user_id')
 
-    # Ensure user has permission to edit
+    # Verify Ownership
     role_query = db.session.query(task_user.c.role).filter(task_user.c.task_id == task.id, task_user.c.user_id == user_id).first()
-    if user_id != task.user_id and (role_query is None or role_query[0] not in ['EDITOR', 'ADMIN']):
+    if user_id != task.user_id and (role_query is None or role_query[0] not in ['Editor', 'ADMIN']):
         flash('You do not have permission to edit this task.', 'danger')
         return redirect(url_for('main.dashboard'))
 
     form = TaskForm(obj=task)
     
-    # Populate the category field choices
+    # Populate the category field
     categories = Category.query.filter_by(user_id=user_id).all()
     form.category.choices = [(-1, "No Category")] + [(c.id, c.name) for c in categories]
 
     if form.validate_on_submit():
-        # Track changes made to the task
         changes = get_task_changes(task, form)
 
-        # Update the task with new data
         task.title = form.title.data
         task.description = form.description.data
         category_id = form.category.data
@@ -393,7 +397,6 @@ def edit_task(task_id):
 
         db.session.commit()
 
-        # Log each change
         for change in changes:
             activity = ActivityLog(
                 description=change,
@@ -406,7 +409,8 @@ def edit_task(task_id):
         flash('Task updated successfully!', 'success')
         return redirect(url_for('main.dashboard'))
 
-    # If the form is not valid, add a flash message with form errors
+    form.category.data = task.category_id if task.category_id is not None else -1
+
     if form.errors:
         flash('There were errors in the form. Please correct them.', 'danger')
         for field, errors in form.errors.items():
@@ -416,6 +420,7 @@ def edit_task(task_id):
     return render_template('edit_task.html', form=form, task=task, title="Edit Task", heading="Edit Task", submit_label="Save Changes")
 
 
+
 @main.route('/delete_task/<int:task_id>', methods=['POST'])
 @login_required
 @role_required('ADMIN', 'OWNER', context='task', context_id=lambda **kwargs: kwargs.get('task_id'))
@@ -423,7 +428,7 @@ def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
 
     user_id = session.get('user_id')
-    # Check if the user has access rights to delete
+    # Verify Ownership
     if not any(user.id == user_id for user in task.users) and task.category.user_id != user_id:
         flash('You do not have permission to delete this task.', 'danger')
         return redirect(url_for('main.dashboard'))
@@ -437,7 +442,7 @@ from sqlalchemy import and_
 
 import logging
 
-# Configure logging for debugging
+# Debugging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -447,13 +452,13 @@ def share_task(task_id):
     task = Task.query.get_or_404(task_id)
     user_id = session.get('user_id')
 
-    # Check if the logged-in user is the owner of the task
+    # Verify Ownership
     result = db.session.execute(
         db.select(task_user).where(
             and_(
                 task_user.c.task_id == task.id,
                 task_user.c.user_id == user_id,
-                task_user.c.role == 'Owner'
+                task_user.c.role.in_(['Owner', 'ADMIN'])
             )
         )
     ).first()
@@ -461,7 +466,7 @@ def share_task(task_id):
     if result is None:
         flash('Only the owner can share this task.', 'danger')
         logger.warning("User %s attempted to share task %d, but is not the owner.", user_id, task_id)
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('main.categories'))
 
     form = ShareTaskForm()
 
@@ -487,10 +492,8 @@ def share_task(task_id):
     if form.errors:
         logger.warning("Form validation errors: %s", form.errors)
 
-    # Log if form is not validated or if it's a GET request
     logger.info("Form not submitted or not valid, displaying share task form.")
 
-    # Get all users assigned to this task
     users_assigned = (
         db.session.query(User, task_user.c.role)
         .join(task_user, task_user.c.user_id == User.id)
@@ -498,7 +501,6 @@ def share_task(task_id):
         .all()
     )
 
-    # Get all users (to potentially add to the task)
     users = User.query.all()
 
     return render_template(
@@ -509,18 +511,60 @@ def share_task(task_id):
         users=users
     )
 
+@main.route('/manage_task_users/<int:task_id>', methods=['GET', 'POST'])
+@login_required
+def manage_task_users(task_id):
+    task = Task.query.get_or_404(task_id)
+    user_id = session.get('user_id')
+
+    # Verify Ownership
+    role_query = db.session.query(task_user.c.role).filter(task_user.c.task_id == task.id, task_user.c.user_id == user_id).first()
+    if role_query is None or role_query[0] not in ['Owner', 'ADMIN']:
+        flash('You do not have permission to manage users for this task.', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    # Get all users assigned to this task
+    users_assigned = (
+        db.session.query(User, task_user.c.role)
+        .join(task_user, task_user.c.user_id == User.id)
+        .filter(task_user.c.task_id == task.id)
+        .all()
+    )
+
+    invitations = TaskInvitation.query.filter_by(task_id=task.id, status='Pending').all()
+
+    form = ShareTaskForm()
+    if form.validate_on_submit():
+        invitee = User.query.filter_by(email=form.email.data).first()
+        if invitee is None:
+            flash('User with that email does not exist.', 'danger')
+            return redirect(url_for('main.manage_task_users', task_id=task.id))
+
+        invitation = TaskInvitation(task_id=task.id, inviter_id=user_id, invitee_id=invitee.id, role=form.role.data)
+        db.session.add(invitation)
+        db.session.commit()
+
+        flash(f'Invitation sent to {invitee.email} as {form.role.data}.', 'success')
+        return redirect(url_for('main.manage_task_users', task_id=task.id))
+
+    return render_template(
+        'manage_task_users.html',
+        form=form,
+        task=task,
+        users_assigned=users_assigned,
+        invitations=invitations
+    )
+
+
 @main.route('/invitations', methods=['GET'])
 @login_required
 def view_invitations():
     user_id = session.get('user_id')
 
-    # Invitations received by the logged-in user
+    # Verify invitations
     invitations_received = TaskInvitation.query.filter_by(invitee_id=user_id, status='Pending').all()
-
-    # Invitations sent by the logged-in user
     invitations_sent = TaskInvitation.query.filter_by(inviter_id=user_id, status='Pending').all()
 
-    # Create an instance of the form
     form = CancelInvitationForm()
 
     return render_template('invitations.html', invitations_received=invitations_received, invitations_sent=invitations_sent, form=form)
@@ -554,18 +598,16 @@ def cancel_invitation(invitation_id):
 def accept_invitation(invitation_id):
     invitation = TaskInvitation.query.get_or_404(invitation_id)
 
-    # Ensure the logged-in user is the invited person
+    # Verify Ownership
     user_id = session.get('user_id')
     if invitation.invitee_id != user_id:
         flash('You do not have permission to perform this action.', 'danger')
         return redirect(url_for('main.view_invitations'))
 
     try:
-        # Insert the user-task association into the task_user table
         stmt = task_user.insert().values(task_id=invitation.task_id, user_id=invitation.invitee_id, role=invitation.role)
         db.session.execute(stmt)
 
-        # Update invitation status to 'Accepted'
         invitation.status = 'Accepted'
         db.session.commit()
 
@@ -583,7 +625,7 @@ def accept_invitation(invitation_id):
 def decline_invitation(invitation_id):
     invitation = TaskInvitation.query.get_or_404(invitation_id)
 
-    # Ensure the logged-in user is the invited
+    # Verify Ownership 
     if invitation.invitee_id != session.get('user_id'):
         flash('You do not have permission to perform this action.', 'danger')
         return redirect(url_for('main.view_invitations'))
@@ -595,39 +637,61 @@ def decline_invitation(invitation_id):
     flash('Invitation declined.', 'info')
     return redirect(url_for('main.view_invitations'))
 
-@main.route('/task/<int:task_id>/mark_done', methods=['POST'])
+@main.route('/task/<int:task_id>/toggle_done', methods=['POST'])
 @login_required
-def mark_task_done(task_id):
+def toggle_task_done(task_id):
     task = Task.query.get_or_404(task_id)
     user_id = session.get('user_id')
 
-    # Check if the user is either the owner or has edit rights to mark the task as done
+    # Verify Ownership
     task_user_entry = db.session.query(task_user).filter_by(task_id=task.id, user_id=user_id).first()
 
     # Update permission check to allow the task owner or Editor/Admin role
     if task.user_id != user_id and (not task_user_entry or task_user_entry.role not in ['EDITOR', 'ADMIN']):
-        flash("You don't have permission to mark this task as done.", 'danger')
-        return redirect(url_for('main.view_task', task_id=task_id))
+        flash("You don't have permission to modify this task's completion status.", 'danger')
+        return redirect(url_for('main.view_category', category_id=task.category_id))
 
-    # Mark the task as completed
-    task.completed = True
+    # Toggle the completed status
+    task.completed = not task.completed
     db.session.commit()
 
-    flash('Task marked as completed!', 'success')
-    return redirect(url_for('main.view_task', task_id=task_id))
+    status = 'completed' if task.completed else 'not completed'
+    flash(f'Task marked as {status}!', 'success')
+    return redirect(url_for('main.view_category', category_id=task.category_id))
+
+
+@main.route('/uncategorized_tasks', methods=['GET'])
+@login_required
+def uncategorized_tasks():
+    user_id = session.get('user_id')
+    
+    # Fetch uncategorized tasks
+    uncategorized_tasks = Task.query.filter(Task.user_id == user_id, Task.category_id == None).all()
+    print(f"Uncategorized Tasks Without User Filter: {len(uncategorized_tasks)}")
+    
+    # Bugfix
+    for task in uncategorized_tasks:
+        print(f"Task ID: {task.id}, Title: {task.title}, User ID: {task.user_id}, Category ID: {task.category_id}")
+
+    return render_template('uncategorized_tasks.html', uncategorized_tasks=uncategorized_tasks)
+
 
 @main.route('/task/<int:task_id>/manage_users', methods=['GET', 'POST'])
 @login_required
-def manage_task_users(task_id):
+def manage_task_users_for_task(task_id):
     task = Task.query.get_or_404(task_id)
     user_id = session.get('user_id')
 
-    # Ensure that the user has permission to manage the task
+    # Verify Ownership or Admin role
     task_user_entry = db.session.query(task_user).filter_by(task_id=task.id, user_id=user_id).first()
     if not task_user_entry or task_user_entry.role not in ['OWNER', 'ADMIN']:
         flash("You do not have permission to manage users for this task.", 'danger')
-        return redirect(url_for('main.dashboard'))
+        return render_template(
+            'view_task.html',
+            task=task
+        )
 
+    # Proceed to handle management actions if user has permission
     form = ShareTaskForm()
 
     if request.method == 'POST':
@@ -635,13 +699,11 @@ def manage_task_users(task_id):
         selected_user_id = request.form.get('user_id')
 
         if action == 'remove':
-            # Remove user from task
             db.session.query(task_user).filter_by(task_id=task.id, user_id=selected_user_id).delete()
             db.session.commit()
             flash('User removed from the task successfully.', 'success')
 
         elif action == 'update_role':
-            # Update user's role in the task
             new_role = request.form.get('role')
             stmt = task_user.update().where(
                 (task_user.c.task_id == task.id) & (task_user.c.user_id == selected_user_id)
@@ -651,7 +713,6 @@ def manage_task_users(task_id):
             flash('User role updated successfully.', 'success')
 
         elif action == 'add' and form.validate_on_submit():
-            # Add new user to the task
             new_user_id = request.form.get('user_id')
             new_role = request.form.get('role')
 
@@ -664,7 +725,6 @@ def manage_task_users(task_id):
                 db.session.commit()
                 flash('User added to the task successfully.', 'success')
 
-    # Get all users assigned to this task
     users_assigned = (
         db.session.query(User, task_user.c.role)
         .join(task_user, task_user.c.user_id == User.id)
@@ -672,7 +732,6 @@ def manage_task_users(task_id):
         .all()
     )
 
-    # Get all users (to potentially add to the task)
     users = User.query.all()
 
     return render_template(
@@ -682,6 +741,7 @@ def manage_task_users(task_id):
         users=users,
         form=form
     )
+
 
 # Conflict Detection
 @main.route('/check_task_conflict', methods=['POST'])
@@ -705,16 +765,25 @@ def task_calendar():
 @main.route('/task/<int:task_id>', methods=['GET'])
 @login_required
 def view_task(task_id):
+    # Fetch the task or return a 404 if not found
     task = Task.query.get_or_404(task_id)
     user_id = session.get('user_id')
 
-    # Check if the user has permission to view the task
+    # Fetch the user's role in this task
     task_user_entry = db.session.query(task_user).filter_by(task_id=task.id, user_id=user_id).first()
+
+    # Check if the user has permission to view the task
     if not task_user_entry:
         flash('You do not have permission to view this task.', 'danger')
         return redirect(url_for('main.dashboard'))
 
-    return render_template('view_task.html', task=task)
+    # Render the view task page with the fetched task and user's role in this task
+    return render_template(
+        'view_task.html',
+        task=task,
+        task_user_entry=task_user_entry
+    )
+
 
 @main.route('/task/<int:task_id>/comments', methods=['GET', 'POST'])
 @login_required
@@ -722,6 +791,12 @@ def task_comments(task_id):
     task = Task.query.get_or_404(task_id)
     form = CommentForm()
     user_id = session.get('user_id')
+
+    # Count prerequisit for comments
+    user_task_count = db.session.query(Task).filter_by(user_id=user_id).count()
+    if user_task_count < 5:
+        flash("You need to create at least 5 tasks before you can comment on tasks.", "warning")
+        return redirect(url_for('main.view_task', task_id=task_id))
 
     if form.validate_on_submit():
         new_comment = Comment(content=form.content.data, user_id=user_id, task_id=task_id)
@@ -734,19 +809,6 @@ def task_comments(task_id):
     return render_template('task_comments.html', task=task, form=form, comments=comments)
 
 
-def get_task_changes(task, form):
-    changes = []
-
-    if task.title != form.title.data:
-        changes.append(f"Title changed from '{task.title}' to '{form.title.data}'")
-
-    if task.description != form.description.data:
-        old_desc = task.description if task.description else "None"
-        new_desc = form.description.data if form.description.data else "None"
-        changes.append(f"Description changed from '{old_desc}' to '{new_desc}'")
-
-    return changes
-
 @main.route('/categories', methods=['GET', 'POST'])
 @login_required
 def categories():
@@ -754,20 +816,17 @@ def categories():
     user_id = session.get('user_id')
 
     if form.validate_on_submit():
-        # Convert color to a string representation
         color_value = str(form.color.data) if isinstance(form.color.data, str) else form.color.data.hex
 
-        # Create a new category with color
         new_category = Category(
             name=form.name.data,
             description=form.description.data,
-            color=color_value,  # Save color as a hex value string
+            color=color_value,
             user_id=user_id
         )
         db.session.add(new_category)
         db.session.commit()
 
-        # Log activity for creating a category
         activity = ActivityLog(
             description=f"Category '{new_category.name}' created by user {user_id}",
             user_id=user_id,
@@ -783,7 +842,7 @@ def categories():
     user_categories = Category.query.filter_by(user_id=user_id).all()
     return render_template('categories.html', form=form, categories=user_categories)
 
-@main.route('/category/<int:category_id>', methods=['GET'])
+@main.route('/category/<int:category_id>', methods=['GET', 'POST'])
 @login_required
 def view_category(category_id):
     """Route to view the details of a specific category and its tasks"""
@@ -792,8 +851,12 @@ def view_category(category_id):
 
     # Get all tasks in the selected category
     tasks = Task.query.filter_by(category_id=category_id).all()
+    form = TaskForm()
+    categories = Category.query.filter_by(user_id=user_id).all()
+    form.category.choices = [(-1, "No Category")] + [(c.id, c.name) for c in categories]
 
-    return render_template('view_category.html', category=category, tasks=tasks)
+    return render_template('view_category.html', category=category, tasks=tasks, form=form)
+
 
 
 @main.route('/edit_category/<int:category_id>', methods=['GET', 'POST'])
@@ -803,7 +866,7 @@ def edit_category(category_id):
     category = Category.query.get_or_404(category_id)
     user_id = session.get('user_id')
 
-    # Check if the logged-in user has access rights to this category
+    # Verify Ownership
     user_role = db.session.query(category_user.c.role).filter_by(category_id=category_id, user_id=user_id).first()
     if not user_role or user_role[0] not in ['ADMIN', 'OWNER']:
         return jsonify({"success": False, "error": "You do not have permission to edit this category."}), 403
@@ -812,10 +875,8 @@ def edit_category(category_id):
         if request.is_json:
             data = request.get_json()
         else:
-            # Handle form data submission if not sent as JSON
             data = request.form
 
-        # CSRF Token Validation
         csrf_token = data.get('csrf_token')
         try:
             validate_csrf(csrf_token)
@@ -881,12 +942,13 @@ def get_category_data(category_id):
 
 @main.route('/delete_category/<int:category_id>', methods=['POST'])
 @login_required
+@role_required('ADMIN', 'OWNER', context='category', context_id=lambda **kwargs: kwargs.get('category_id'))
 def delete_category(category_id):
     try:
         category = Category.query.get_or_404(category_id)
         user_id = session.get('user_id')
 
-        # Ensure the user has permission to delete the category
+        # Permission to delete
         if category.user_id != user_id:
             flash('You do not have permission to delete this category.', 'danger')
             return redirect(url_for('main.dashboard'))
@@ -897,7 +959,6 @@ def delete_category(category_id):
         db.session.delete(category)
         db.session.commit()
 
-        # Flash a success message
         flash(f"Category '{category_name}' deleted successfully.", 'success')
         return redirect(url_for('main.dashboard'))
 
@@ -913,10 +974,9 @@ def delete_category(category_id):
 def add_category():
     user_id = session.get('user_id')
 
-    # Log the entire request.form to see what data is being received
     print("Received form data:", request.form)
 
-    # Use the correct field names matching the submitted data
+    # Field verification
     category_name = request.form.get('name')
     category_color = request.form.get('color', '#007bff')
     category_description = request.form.get('description', '')
@@ -928,7 +988,6 @@ def add_category():
 
     # Check if category name is present
     if category_name:
-        # Create the new category
         new_category = Category(
             name=category_name,
             color=category_color,
@@ -943,7 +1002,7 @@ def add_category():
         db.session.add(new_category)
         db.session.commit()
 
-        # Assign "Admin" role to the user for this category
+        # Assign "ADMIN" role to the user for this category
         stmt = category_user.insert().values(category_id=new_category.id, user_id=user_id, role='ADMIN')
         db.session.execute(stmt)
         db.session.commit()
@@ -963,12 +1022,11 @@ def mark_all_completed(category_id):
     # Retrieve the category
     category = Category.query.get_or_404(category_id)
 
-    # Ensure the logged-in user owns the category
+    # Verify Ownership
     if category.user_id != session.get('user_id'):
         flash('You do not have permission to mark tasks in this category as completed.', 'danger')
         return redirect(url_for('main.dashboard'))
-
-    # Logic to mark all tasks as completed
+    
     for task in category.tasks:
         task.completed = True
     db.session.commit()
@@ -980,7 +1038,7 @@ def mark_all_completed(category_id):
 @login_required
 def get_tasks():
     user_id = session.get('user_id')
-    task_id = request.args.get('task_id', type=int)  # Get task_id from query parameter if available
+    task_id = request.args.get('task_id', type=int)
 
     # Logging for debugging purposes
     if task_id:
@@ -990,10 +1048,8 @@ def get_tasks():
 
     # Fetch all tasks if no specific task_id is provided
     if task_id is None:
-        # Get all tasks owned or shared with the user
         tasks = Task.query.filter_by(user_id=user_id).all()
     else:
-        # Get the specific task
         tasks = Task.query.filter_by(id=task_id, user_id=user_id).all()
 
     # Prepare tasks for FullCalendar
@@ -1025,18 +1081,13 @@ def fetch_categories():
     priority = data.get('priority')
     visibility = data.get('visibility')
 
-    # Base query
     query = Category.query.filter_by(user_id=user_id)
 
-    # Apply search filter
+    # Filters
     if search_query:
         query = query.filter(Category.name.ilike(f"%{search_query}%"))
-
-    # Apply priority filter
     if priority:
         query = query.filter_by(priority_level=priority)
-
-    # Apply visibility filter
     if visibility:
         query = query.filter_by(visibility=visibility)
 

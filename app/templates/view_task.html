@@ -4,84 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View Task</title>
-    
-    <!-- Custom Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    
-    <!-- FullCalendar CSS -->
-    <link href="{{ url_for('static', filename='@fullcalendar/core/index.global.min.css') }}" rel="stylesheet">
-    <link href="{{ url_for('static', filename='@fullcalendar/daygrid/index.global.min.css') }}" rel="stylesheet">
-    <link href="{{ url_for('static', filename='@fullcalendar/timegrid/index.global.min.css') }}" rel="stylesheet">
-
-    <!-- Custom Calendar CSS -->
-    <link href="{{ url_for('static', filename='css/custom-calendar.css') }}" rel="stylesheet">
 </head>
 <body>
-    {% extends "base.html" %} 
+    {% extends "base.html" %}
     {% block content %}
-    <input type="hidden" id="taskId" value="{{ task.id }}">
-    <!-- Task Details -->
-    <h1>{{ task.title }}</h1>
-    <p><strong>Description:</strong> {{ task.description }}</p>
-    <p><strong>Category:</strong> {{ task.category.name if task.category else 'Uncategorized' }}</p>
-    
-    <p><strong>Assigned Users:</strong></p>
-    <ul>
-        {% for user in task.users %}
-            <li>{{ user.username }} (Role: {{ user.role }})</li>
-        {% endfor %}
-    </ul>
 
-    <a href="{{ url_for('main.manage_task_users', task_id=task.id) }}" class="btn btn-secondary">Manage Users</a>
-    <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit Task</a>
-    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    <!-- Display flashed messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes">
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 
-    <!-- Calendar Container for Full Overview -->
-    <h2>Task Schedule Overview</h2>
-    <div id="calendar" style="max-width: 1100px; margin: 40px auto;"></div>
+    <!-- Display Task Details -->
+    <div class="task-details card">
+        <h1>{{ task.title }}</h1>
+        <p><strong>Description:</strong> {{ task.description }}</p>
+        <p><strong>Category:</strong> {{ task.category.name if task.category else 'Uncategorized' }}</p>
+        <p><strong>Priority:</strong> {{ task.priority }}</p>
+        <p><strong>Status:</strong> {{ task.status }}</p>
+        <p><strong>Tags:</strong> {{ task.tags }}</p>
+        <p><strong>Recurring:</strong> {{ 'Yes' if task.is_recurring else 'No' }}</p>
+        {% if task.is_recurring %}
+            <p><strong>Recurrence Frequency:</strong> {{ task.recurrence_frequency }}</p>
+        {% endif %}
+        <p><strong>Reminder Time:</strong> {{ task.reminder_time if task.reminder_time else 'None' }}</p>
+        <p><strong>Start Time:</strong> {{ task.start_time.strftime('%Y-%m-%d %H:%M') }}</p>
+        <p><strong>End Time:</strong> {{ task.end_time.strftime('%Y-%m-%d %H:%M') if task.end_time else 'None' }}</p>
 
-    <!-- FullCalendar JS -->
-    <script src="{{ url_for('static', filename='@fullcalendar/core/index.global.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='@fullcalendar/daygrid/index.global.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='@fullcalendar/timegrid/index.global.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='@fullcalendar/interaction/index.global.min.js') }}"></script>
+        <!-- Display Assigned Users -->
+        <h3>Assigned Users</h3>
+        <ul>
+            {% for user in task.users %}
+                <li>{{ user.username }} (Role: {{ user.role }})</li>
+            {% endfor %}
+        </ul>
 
-    <!-- JavaScript to Render the Calendar -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var taskId = document.getElementById('taskId').value;  // Retrieve task ID from hidden input
-    
-            var calendarEl = document.getElementById('calendar');
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'timeGridWeek',
-                firstDay: 1,  // Start the week from Monday
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                },
-                editable: false,
-                selectable: false,
-                events: function(fetchInfo, successCallback, failureCallback) {
-                    // Fetch events related to the current task from the backend
-                    fetch(`/api/tasks?task_id=${taskId}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            console.log("Fetched events data:", data);  // Log the fetched events data
-                            successCallback(data);
-                        })
-                        .catch(error => {
-                            console.error("Failed to fetch events:", error);  // Log errors if fetch fails
-                            failureCallback(error);
-                        });
-                },
-                height: 'auto'  // Adjust calendar height to fit content
-            });
-    
-            calendar.render();
-        });
-    </script>    
+        <!-- Action Buttons -->
+        <div class="task-actions">
+            <!-- View Comments: Available to all users with task access -->
+            <a href="{{ url_for('main.task_comments', task_id=task.id) }}" class="btn btn-secondary">View Comments</a>
+
+            <!-- Edit Task: Available to Editor, Admin, and Owner -->
+            {% if task_user_entry and task_user_entry.role in ['EDITOR', 'ADMIN', 'OWNER'] %}
+                <a href="{{ url_for('main.edit_task', task_id=task.id) }}" class="btn">Edit Task</a>
+            {% endif %}
+
+            <!-- Delete Task: Available to Admin and Owner -->
+            {% if task_user_entry and task_user_entry.role in ['ADMIN', 'OWNER'] %}
+                <form action="{{ url_for('main.delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-danger">Delete Task</button>
+                </form>
+            {% endif %}
+
+            <!-- Manage Users: Available to Admin and Owner -->
+            {% if task_user_entry and task_user_entry.role in ['ADMIN', 'OWNER'] %}
+                <a href="{{ url_for('main.manage_task_users', task_id=task.id) }}" class="btn btn-secondary">Manage Users</a>
+            {% endif %}
+        </div>
+    </div>
+
     {% endblock %}
-    
 </body>
 </html>

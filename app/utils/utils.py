@@ -1,6 +1,6 @@
 from functools import wraps
 from flask import session, redirect, url_for, flash, request, jsonify
-from app.models import db, category_user, task_user  # Import db and other models/tables needed
+from app.models import db, category_user, task_user
 from flask_wtf.csrf import validate_csrf, CSRFError
 
 def login_required(f):
@@ -26,11 +26,10 @@ def role_required(*roles, context='global', context_id=None):
             elif context == 'task' and context_value:
                 user_role = db.session.query(task_user.c.role).filter_by(task_id=context_value, user_id=user_id).first()
 
-            # Normalize both user role and required roles to uppercase for comparison
             user_role_upper = user_role[0].upper() if user_role else None
             roles_upper = [role.upper() for role in roles]
 
-            # Debugging statements
+            # Debugging
             print(f"User ID: {user_id}, Context ID: {context_value}, Role Retrieved: {user_role_upper}, Required roles: {roles_upper}")
 
             if user_role_upper not in roles_upper:
