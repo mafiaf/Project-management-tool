@@ -69,11 +69,6 @@
                         <!-- Dropdown Menu for actions like Edit or Delete -->
                         <div class="menu-options" id="menu-{{ category.id }}" style="display: none;">
                             <div class="menu-item">
-                                <a href="#" onclick="openEditCategoryModal(event, '{{ category.id }}', '{{ category.name }}', '{{ category.description }}', '{{ category.color }}', '{{ category.priority_level }}', '{{ category.visibility }}', '{{ category.is_shared }}', '{{ category.icon }}', '{{ category.archived }}')">
-                                    <span class="edit-icon">&#x270E;</span> Edit
-                                </a>                                        
-                            </div>
-                            <div class="menu-item">
                                 <form action="{{ url_for('main.delete_category', category_id=category.id) }}" method="POST" style="display:inline;">
                                     {{ form.hidden_tag() }}
                                     <button type="submit" class="btn btn-danger" onclick="event.stopPropagation();">
@@ -98,9 +93,6 @@
                             {% endfor %}
                         </ul>
                         <p>Tasks Completed: {{ category.completed_tasks }} / {{ category.task_count }}</p>
-                    
-                        <button class="add-task-btn" data-category-id="{{ category.id }}">Add Task</button>
-                        <button class="mark-all-btn" data-category-id="{{ category.id }}">Mark All as Completed</button>
                     </div>                        
                     {% endfor %}
                 {% endif %}
@@ -178,50 +170,6 @@
                 </div>
 
 
-<!-- Modal for editing a category -->
-<div id="editCategoryModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <span class="close-btn" id="closeEditModal">&times;</span>
-        <h2>Edit Category</h2>
-        <form id="editCategoryForm" onsubmit="submitEditCategory(event)">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" id="editCategoryId" name="categoryId">
-
-            <label for="editCategoryName">Category Name:</label>
-            <input type="text" id="editCategoryName" name="categoryName" required>
-
-            <label for="editCategoryDescription">Category Description:</label>
-            <textarea id="editCategoryDescription" name="categoryDescription" rows="3"></textarea>
-
-            <label for="editCategoryColor">Category Color:</label>
-            <input type="color" id="editCategoryColor" name="categoryColor">
-
-            <label for="editCategoryPriority">Priority Level:</label>
-            <select id="editCategoryPriority" name="priorityLevel">
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-            </select>
-
-            <label for="editCategoryVisibility">Visibility:</label>
-            <select id="editCategoryVisibility" name="visibility">
-                <option value="Public">Public</option>
-                <option value="Private">Private</option>
-            </select>
-
-            <label for="editCategoryShared">Share this Category?</label>
-            <input type="checkbox" id="editCategoryShared" name="isShared">
-
-            <label for="editCategoryIcon">Icon Path or Name:</label>
-            <input type="text" id="editCategoryIcon" name="categoryIcon">
-
-            <label for="editCategoryArchived">Archived?</label>
-            <input type="checkbox" id="editCategoryArchived" name="archived">
-
-            <button type="submit" class="btn">Save Changes</button>
-        </form>
-    </div>
-</div>
             <!-- Scripts -->
             <script src="{{ url_for('static', filename='js/submit-handlers.js') }}" defer></script>
             <script src="{{ url_for('static', filename='js/dom-content-loaded.js') }}" defer></script>

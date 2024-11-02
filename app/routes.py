@@ -9,6 +9,8 @@ import calendar
 import json
 from flask_wtf.csrf import validate_csrf, CSRFError, validate_csrf
 from app.utils.utils import login_required, role_required
+from sqlalchemy import and_
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -292,8 +294,7 @@ def add_task():
         logger.error(f"Form validation errors: {form.errors}")
         flash(f"Form validation errors: {form.errors}", "danger")
 
-    return redirect(url_for('main.dashboard'))
-
+    return redirect(url_for('main.view_category', category_id=category_id) if category_id else url_for('main.dashboard'))
 
 
 
@@ -428,19 +429,26 @@ def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
 
     user_id = session.get('user_id')
+
     # Verify Ownership
-    if not any(user.id == user_id for user in task.users) and task.category.user_id != user_id:
+    task_user_entry = db.session.query(task_user).filter_by(task_id=task.id, user_id=user_id).first()
+    if not task_user_entry and task.category.user_id != user_id:
         flash('You do not have permission to delete this task.', 'danger')
         return redirect(url_for('main.dashboard'))
 
-    db.session.delete(task)
-    db.session.commit()
-    flash('Task deleted successfully!', 'success')
-    return redirect(url_for('main.dashboard'))
+    category_id = task.category_id
 
-from sqlalchemy import and_
+    try:
+        db.session.delete(task)
+        db.session.commit()
+        flash('Task deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'An error occurred while deleting the task: {str(e)}', 'danger')
 
-import logging
+    return redirect(url_for('main.view_category', category_id=category_id) if category_id else url_for('main.dashboard'))
+
+
 
 # Debugging
 logging.basicConfig(level=logging.INFO)
